@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "oven.bun-vscode",
+    "dprint.dprint",
+    "task.vscode-task",
+    "humao.rest-client",
+    "yoavbls.pretty-ts-errors",
+    "usernamehw.errorlens",
+    "tamasfe.even-better-toml",
+    "redhat.vscode-yaml"
+  ]
+}

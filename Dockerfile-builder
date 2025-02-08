@@ -1,0 +1,22 @@
+ARG BUILDER=docker.io/oven/bun:latest
+FROM $BUILDER
+
+RUN mkdir /app
+WORKDIR /app
+
+RUN apt-get -y update && \
+apt-get install --no-install-recommends \
+-y curl ca-certificates && \
+rm -rf /var/lib/apt/lists/*
+
+COPY --chown=0:0 extra-certs.pem /etc/
+RUN sh -c '[ -s /etc/extra-certs.pem ] && csplit -s -z -f "/usr/local/share/ca-certificates/extra-cert-" -b "%02d.crt" /etc/extra-certs.pem "/-----BEGIN CERTIFICATE-----/" "{*}" && update-ca-certificates || true'
+
+ENV TZ=Europe/Zurich
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+RUN sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+
+COPY Taskfile.yml .
+RUN task compile:init
+RUN rm -rf Taskfile.yml out 

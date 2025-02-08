@@ -1,0 +1,220 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+vars:
+  PROJ: "{{ .ROOT_DIR | base }}"
+  IMG: "localhost/{{.PROJ}}:develop"
+  IMG_BUN_DIR: "{{.ROOT_DIR}}/.img-bun"
+  IMG_BUILDER: "localhost/{{.PROJ}}-builder:develop"
+  IMG_BUILDER_FROM: "docker.io/oven/bun:latest"
+  IMG_BASE: "localhost/{{.PROJ}}-base:develop"
+  IMG_BASE_FROM: "registry.access.redhat.com/ubi9/ubi-minimal:latest"
+  ENTRY_TS: src/mod.ts
+  ASSETS: "" #"--asset-naming='[name].[ext]' src/db/schema.sql"
+
+tasks:
+  run:
+    desc: "Runs {{.ENTRY_TS}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run {{.CLI_ARGS | default .ENTRY_TS}}
+
+  dev:
+    desc: "Runs {{.ENTRY_TS}} with --watch --no-clear-screen"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run --watch --no-clear-screen {{.CLI_ARGS | default .ENTRY_TS}}
+
+  update:
+    desc: "Updates dependencies"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun outdated
+      - bun update {{.CLI_ARGS}}
+
+  fmt:
+    desc: "Formats the code"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun x dprint fmt
+
+  fmt:update:
+    desc: "Updates the formatter plugins"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun x dprint config add typescript
+      - bun x dprint config add json
+      - bun x dprint config add toml
+      - bun x dprint config add markdown
+      - bun x dprint config add dockerfile
+      - bun x dprint config add g-plane/pretty_yaml
+
+  test:create:
+    desc: "Tests this repo with bun create"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      OUT: "/tmp/{{.PROJ}}-test-create/{{now | unixEpoch}}"
+    cmds:
+      - bun create {{.PROJ}} {{.OUT}} {{.CLI_ARGS}}
+    env:
+      BUN_CREATE_DIR: "{{.ROOT_DIR}}/.."
+
+  test:create:clean:
+    desc: "Cleans up the test create dirs"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - rm -rf /tmp/{{.PROJ}}-test-create
+
+  clean:
+    desc: "Cleans the project."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - echo cleaning...
+
+  clean:mrproper:
+    desc: "Cleans (mrproper) the project."
+    prompt: "Run mrproper?"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - rm -rf node_modules out || true
+      - rm -rf "{{.IMG_BUN_DIR}}" || true
+      - podman image rm {{.IMG_BUILDER}} {{.IMG_BASE}} {{.IMG}} || true
+      - podman volume rm {{.PROJ}} || true
+
+  deps:effect:
+    desc: "Adds effect-ts dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add effect @effect/platform @effect/platform-bun
+
+  deps:effect:telemetry:
+    desc: "Adds effect-ts telemetry dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @effect/opentelemetry @effect/experimental @opentelemetry/exporter-trace-otlp-proto @opentelemetry/sdk-trace-base @opentelemetry/sdk-trace-node @opentelemetry/sdk-trace-web
+
+  deps:effect:sqlite:
+    desc: "Adds effect-ts sqlite dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @effect/sql @effect/sql-sqlite-bun
+
+  deps:effect:libsql:
+    desc: "Adds effect-ts libsql dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @effect/sql @effect/sql-libsql
+
+  deps:effect:drizzle:
+    desc: "Adds effect-ts drizzle dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @effect/sql @effect/sql-drizzle drizzle-orm
+      - bun add --dev drizzle-kit @libsql/client
+
+  deps:kitajs:
+    desc: "Adds kitajs dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @kitajs/html
+
+  deps:cheerio:
+    desc: "Adds cheerio dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add cheerio domhandler
+
+  drizzle:
+    desc: "Runs drizzle"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun x drizzle-kit {{.CLI_ARGS}}
+
+  drizzle:export:
+    desc: "Runs drizzle export to generate src/db/schema.sql"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - task drizzle -- export | sed -E -e 's|^CREATE ([^`]+) `|--###\nCREATE \1 IF NOT EXISTS `|' | tee src/db/schema.sql
+
+  datasette:install:
+    cmds:
+      - pip3 install datasette # https://datasette.io/
+
+  datasette:
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - datasette serve -h 0.0.0.0 -p 8001 --crossdb --setting sql_time_limit_ms 60000 --setting facet_time_limit_ms 15000 --setting suggest_facets off --setting max_csv_mb 0 --setting truncate_cells_html 0 --setting base_url / --cors *.db
+
+  compile:
+    desc: "Compiles {{.ENTRY_TS}} for {{ARCH}}"
+    vars:
+      tgt: '{{if eq ARCH "arm64"}}bun-linux-arm64{{else}}bun-linux-x64-modern{{end}}'
+    cmds:
+      - bun install {{.CLI_ARGS}}
+      - bun build --minify-syntax --minify-whitespace --sourcemap --compile --target={{.tgt}} --outfile=out/{{.PROJ}} {{.ENTRY_TS}} {{.ASSETS}}
+      # - mkdir -p out/node_modules/@libsql/ && cp-a node_modules/@libsql/linux-*-gnu out/node_modules/@libsql/
+
+  compile:init:
+    desc: "Prepares the compiler for {{ARCH}}"
+    vars:
+      tgt: '{{if eq ARCH "arm64"}}bun-linux-arm64{{else}}bun-linux-x64-modern{{end}}'
+    cmds:
+      - touch empty.ts
+      - bun build empty.ts --minify-syntax --minify-whitespace --sourcemap --compile --target={{.tgt}} --outfile=out/empty
+      - rm empty.ts out/empty
+
+  img:init:
+    internal: true
+    cmds:
+      - mkdir -p "{{.IMG_BUN_DIR}}" || true
+      - echo "await Bun.write('{{.IMG_BUN_DIR}}/CACHEDIR.TAG',atob('U2lnbmF0dXJlOiA4YTQ3N2Y1OTdkMjhkMTcyNzg5ZjA2ODg2ODA2YmM1NQo='))" | bun run -
+
+  img:builder:
+    desc: "Builds {{.IMG_BUILDER}}"
+    dir: "{{.ROOT_DIR}}"
+    deps:
+      - img:init
+    cmds:
+      - touch extra-certs.pem
+      - podman pull {{.IMG_BUILDER_FROM}}
+      - podman build --volume {{.IMG_BUN_DIR}}:/root/.bun --ignorefile .dockerignore --build-arg BUILDER={{.IMG_BUILDER_FROM}} -t "{{.IMG_BUILDER}}" -f Dockerfile-builder .
+
+  img:base:
+    desc: "Builds {{.IMG}} with {{.IMG_BUILDER}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - touch extra-certs.pem
+      - podman pull {{.IMG_BASE_FROM}}
+      - podman build --ignorefile .dockerignore --build-arg BASE={{.IMG_BASE_FROM}} -t "{{.IMG_BASE}}" -f Dockerfile-base {{.CLI_ARGS}} .
+
+  img:build:
+    desc: "Builds {{.IMG}} with {{.IMG_BUILDER}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman build --volume {{.IMG_BUN_DIR}}:/root/.bun --ignorefile .dockerignore --build-arg BASE={{.IMG_BASE}} --build-arg  BUILDER="{{.IMG_BUILDER}}" --build-arg PROJ="{{.PROJ}}" -t "{{.IMG}}" {{.CLI_ARGS}} .
+
+  img:
+    desc: "Builds {{.IMG}}"
+    cmds:
+      - task: img:builder
+      - task: img:base
+      - task: img:build
+
+  img:run:
+    desc: "Runs {{.IMG}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman volume create {{.PROJ}} || true
+      - podman run --name {{.PROJ}} --rm -it -p 3000:3000 -v "{{.PROJ}}:/data" "{{.IMG}}" {{.CLI_ARGS}}
+
+  img:enter:
+    desc: "Enters running {{.IMG}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman exec -it {{.PROJ}} {{.CLI_ARGS | default "/bin/bash"}}
+
+  flake:update:
+    desc: "Updates flake.lock"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - nix flake update --refresh {{.CLI_ARGS}}

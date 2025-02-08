@@ -1,0 +1,30 @@
+ARG BASE=registry.access.redhat.com/ubi9/ubi-minimal:latest
+FROM $BASE
+
+USER 0:0
+
+COPY --chown=0:0 extra-certs.pem /etc/
+RUN sh -c '[ -s /etc/extra-certs.pem ] && csplit -s -z -f "/etc/pki/ca-trust/source/anchors/extra-cert-" -b "%02d.crt" /etc/extra-certs.pem "/-----BEGIN CERTIFICATE-----/" "{*}" && update-ca-trust extract || true'
+
+RUN sed -i -e 's/gpgcheck = 1/gpgcheck = 1\nsslverify = 0/g' /etc/yum.repos.d/ubi.repo && \
+    microdnf upgrade -y --refresh --noplugins --nodocs --setopt=install_weak_deps=0 && \
+    microdnf reinstall -y --noplugins --nodocs --setopt=install_weak_deps=0 ca-certificates && \
+    sed -i -e 's/gpgcheck = 1/gpgcheck = 1\nsslverify = 1/g' /etc/yum.repos.d/ubi.repo && \
+    microdnf reinstall -y --noplugins --nodocs --setopt=install_weak_deps=0 tzdata && \
+    microdnf clean -y --noplugins all
+
+ENV TZ=Europe/Zurich
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+RUN sh -c 'mkdir -p /home/app; chown 1000:0 /home/app ; chmod g+rwx /home/app' && \
+    sh -c 'mkdir -p /app; chown 1000:0 /app ; chmod g+rwx /app' && \
+    sh -c 'mkdir -p /data; chown 1000:0 /data ; chmod g+rwx /data'
+
+WORKDIR /app
+ENV HOME=/home/app
+ENV DO_NOT_TRACK=1
+
+# ENV NODE_TLS_REJECT_UNAUTHORIZED=0
+# ENV BUN_CONFIG_VERBOSE_FETCH=1
+
+USER 1000:0

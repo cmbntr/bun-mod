@@ -1,0 +1,78 @@
+{
+  "const zz_rnd": {
+    "prefix": "zz",
+    "body": [
+      "const zz_${RANDOM_HEX} ="
+    ]
+  },
+  "Gen Function": {
+    "description": "Generator function",
+    "prefix": "gg",
+    "body": [
+      "function* () {\n  $0\n}"
+    ]
+  },
+  "Effect Gen Function": {
+    "description": "Effect Generator function",
+    "prefix": "egg",
+    "body": [
+      "Effect.gen(function* () {\n  $0\n})"
+    ]
+  },
+  "Effect Gen Function Promise": {
+    "prefix": "eggp",
+    "body": [
+      "Effect.gen(function* () {",
+      "\t${0}${1:${TM_SELECTED_TEXT}}",
+      "}).pipe(",
+      "\tEffect.runPromise",
+      ")"
+    ]
+  },
+  "Effect Promise": {
+    "prefix": "ep",
+    "body": [
+      "Effect.promise(async () => {",
+      "\t${0}${1:${TM_SELECTED_TEXT}}",
+      "})"
+    ]
+  },
+  "Pipe Effect.runPromise": {
+    "prefix": "erp",
+    "body": [
+      "$0.pipe(Effect.runPromise)"
+    ]
+  },
+  "Yield-Star": {
+    "description": "yield*",
+    "prefix": "yy",
+    "body": [
+      "yield* $0"
+    ]
+  },
+  "Yield Star (const)": {
+    "description": "yield* to const",
+    "prefix": "cyy",
+    "body": [
+      "const $1 = yield* $0"
+    ]
+  },
+  "Effect Bun runMain": {
+    "description": "Effect Bun runMain",
+    "prefix": "ebrun",
+    "isFileTemplate": true,
+    "body": [
+      "import { Effect } from \"effect\";",
+      "import { BunRuntime } from \"@effect/platform-bun\";",
+      "",
+      "const program = Effect.log(\"Hello Bun Effect!\");",
+      "",
+      "if (import.meta.main) {",
+      "  BunRuntime.runMain(program, {",
+      "    disableErrorReporting: false,",
+      "    disablePrettyLogger: false,",
+      "  });",
+      "}"
+    ]
+  }
+}

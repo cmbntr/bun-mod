@@ -1,0 +1,10 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "out": "out/docs",
+  "emit": "both",
+  "entryPoints": [
+    "./src/mod.ts"
+  ],
+  "hideGenerator": true,
+  "skipErrorChecking": false
+}

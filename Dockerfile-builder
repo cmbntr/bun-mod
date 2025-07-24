@@ -1,0 +1,34 @@
+ARG BUILDER=docker.io/oven/bun:debian
+FROM $BUILDER
+
+RUN mkdir /app
+WORKDIR /app
+
+RUN apt-get -y update && \
+apt-get install --no-install-recommends \
+-y curl ca-certificates && \
+rm -rf /var/lib/apt/lists/*
+
+COPY --chown=0:0 extra-certs.pem /etc/
+RUN sh -c '[ -s /etc/extra-certs.pem ] && csplit -s -z -f "/usr/local/share/ca-certificates/extra-cert-" -b "%02d.crt" /etc/extra-certs.pem "/-----BEGIN CERTIFICATE-----/" "{*}" && update-ca-certificates || true'
+
+ENV TZ=Europe/Zurich
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# bun uses mimalloc, but tune glibc malloc nonetheless
+ENV MALLOC_ARENA_MAX=2
+#ENV MIMALLOC_SHOW_STATS=1
+
+ENV DO_NOT_TRACK=1
+ENV NODE_ENV=production
+
+# ENV NODE_TLS_REJECT_UNAUTHORIZED=0
+# ENV BUN_CONFIG_MAX_HTTP_REQUESTS=64
+# ENV BUN_CONFIG_VERBOSE_FETCH=curl
+# ENV BUN_CONFIG_VERBOSE_FETCH=true
+
+RUN sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+
+COPY Taskfile.yml .
+RUN task compile:init
+RUN rm -rf Taskfile.yml out 

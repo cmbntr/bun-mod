@@ -1,0 +1,20 @@
+{
+  "selectedAuthType": "oauth-personal",
+  "theme": "Default",
+  "usageStatisticsEnabled": false,
+  "sandbox": "podman",
+  "mcpServers": {
+    "effect-docs": {
+      "command": "podman",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--pull",
+        "newer",
+        "docker.io/timsmart/effect-mcp"
+      ],
+      "env": {}
+    }
+  }
+}

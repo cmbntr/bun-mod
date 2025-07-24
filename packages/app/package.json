@@ -1,0 +1,22 @@
+{
+  "name": "bun-app-app",
+  "module": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "check": "bun x tsc --noEmit",
+    "test": "bun x vitest",
+    "test-update": "bun x vitest --update",
+    "test-coverage": "bun x vitest run --coverage",
+    "madge-circular": "bun x madge --extensions ts --circular --no-color --no-spinner --warning src",
+    "madge-svg": "mkdir -p out && bun x madge --extensions ts --image out/deps.svg src",
+    "madge-dot": "mkdir -p out && bun x madge --extensions ts --dot src > out/deps.dot",
+    "madge": "bun x madge --extensions ts src",
+    "docs": "bun x typedoc",
+    "docs-md": "bun x typedoc --plugin typedoc-plugin-markdown"
+  },
+  "peerDependencies": {},
+  "dependencies": {
+    "bun-app-lib": "workspace:*"
+  },
+  "devDependencies": {}
+}

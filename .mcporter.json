@@ -1,0 +1,10 @@
+{
+  "$schema": "https://raw.githubusercontent.com/openclaw/mcporter/main/mcporter.schema.json",
+  "mcpServers": {
+    "aperture": {
+      "description": "Aperture MCP proxy",
+      "base_url": "http://aiproxy.unicorn-tegu.ts.net/v1/mcp"
+    }
+  },
+  "imports": [ "opencode" ]
+}

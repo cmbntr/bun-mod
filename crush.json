@@ -1,0 +1,71 @@
+{
+  "$schema": "https://charm.land/crush.json",
+  "options": {
+    "disable_provider_auto_update": false,
+    "disable_auto_summarize": false,
+    "disable_metrics": true
+  },
+  "providers": {
+    "openai": {
+      "disable": false,
+      "type": "openai",
+      "base_url": "https://cmbntr-pi4.unicorn-tegu.ts.net/v1",
+      "api_key": "sk-none"
+    }
+  },
+  "lsp": {
+    "typescript": {
+      "disabled": false,
+      "command": "typescript-language-server",
+      "args": [
+        "--stdio",
+        "--log-level",
+        "4"
+      ]
+    }
+  },
+  "permissions": {
+    "allowed_tools": [
+      "ls",
+      "grep"
+    ]
+  },
+  "mcp": {
+    "memory": {
+      "disabled": true,
+      "type": "stdio",
+      "command": "sh",
+      "args": ["-c", "LIBSQL_URL=file://$(pwd)/mcpmem.db exec bun x mcp-memory-libsql"],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
+    "libsql": {
+      "disabled": true,
+      "type": "stdio",
+      "command": "sh",
+      "args": ["-c", "exec bun x @xexr/mcp-libsql --url file://$(pwd)/app.db"],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
+    "mermaid": {
+      "disabled": true,
+      "type": "stdio",
+      "command": "sh",
+      "args": ["-c", "exec bun x mcp-mermaid"],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
+    "effect-docs": {
+      "disabled": true,
+      "type": "stdio",
+      "command": "sh",
+      "args": [
+        "-c",
+        "exec podman run -i --rm --pull newer docker.io/timsmart/effect-mcp"
+      ]
+    }
+  }
+}

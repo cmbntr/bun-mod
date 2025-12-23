@@ -1,0 +1,27 @@
+# https://github.com/openai/codex/blob/main/docs/config.md
+
+model_provider = "openaiProxy"
+model = "gpt-5.2"
+model_reasoning_effort = "medium"
+model_verbosity = "medium"
+show_raw_agent_reasoning = false
+
+[model_providers.openaiProxy]
+name = "OpenAI"
+base_url = "https://cmbntr-pi4.unicorn-tegu.ts.net/v1"
+env_key = "OPENAI_API_KEY"
+wire_api = "responses"
+# request_max_retries = 4 # retry failed HTTP requests
+# stream_max_retries = 10 # retry dropped SSE streams
+# stream_idle_timeout_ms = 300000 # 5m idle timeout
+
+[features]
+web_search_request = true
+
+[mcp_servers.effectDocs]
+command = "sh"
+args = [
+  "-c",
+  "exec podman run -i --rm --pull newer docker.io/timsmart/effect-mcp",
+]
+

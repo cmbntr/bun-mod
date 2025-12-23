@@ -1,0 +1,1205 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+vars:
+  PROJ: "{{ .ROOT_DIR | base }}"
+  PROJ_TAG: "{{.PROJ}}"
+  IMG: "localhost/{{.PROJ}}:develop"
+  IMG_BUN_DIR: "{{.ROOT_DIR}}/.img-bun"
+  IMG_BUILDER: "localhost/{{.PROJ}}-builder:develop"
+  IMG_BUILDER_FROM: "docker.io/oven/bun:debian"
+  IMG_BASE: "localhost/{{.PROJ}}-base:develop"
+  IMG_BASE_FROM: "registry.access.redhat.com/ubi10/ubi-minimal:latest"
+  IMG_MUSL_BUILDER_FROM: "docker.io/oven/bun:alpine"
+  IMG_MUSL_BASE_FROM: "docker.io/library/alpine:latest"
+  OPENSPEC_VERSION: "1.9.0"
+  ENTRY_TS: src/mod.ts
+  APP_PORT: 3000
+  ASSETS: "" #"--asset-naming='[name].[ext]' src/db/schema.sql"
+
+tasks:
+  vscode:open:
+    desc: "Opens the VS Code workspace."
+    dir: "{{.ROOT_DIR}}"
+    aliases:
+      - c
+    cmds:
+      - code {{.PROJ}}.code-workspace
+
+  run:
+    desc: "Runs {{.ENTRY_TS}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run {{.CLI_ARGS | default .ENTRY_TS}}
+    env:
+      PORT: "{{.APP_PORT}}"
+      NODE_ENV: "production"
+      BUN_CONFIG_VERBOSE_FETCH: "false"
+
+  dev:
+    desc: "Runs {{.ENTRY_TS}} with --watch --no-clear-screen"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run --watch --no-clear-screen {{.CLI_ARGS | default .ENTRY_TS}}
+    env:
+      PORT: "{{.APP_PORT}}"
+      NODE_ENV: "production"
+      BUN_CONFIG_VERBOSE_FETCH: "false"
+
+  dev:trace:
+    desc: "Runs {{.ENTRY_TS}} with --watch --no-clear-screen"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run --watch --no-clear-screen {{.CLI_ARGS | default .ENTRY_TS}}
+    env:
+      PORT: "{{.APP_PORT}}"
+      NODE_ENV: "production"
+      BUN_CONFIG_VERBOSE_FETCH: "false"
+      OTEL_EFFECT: "true"
+      # OTEL_EXPORTER_OTLP_HEADERS: "authorization=e4c2331f-2622-444c-988a-f17324f02ba5"
+      # OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318"
+      # OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: "http://localhost:14318/v1/logs"
+
+  update:
+    desc: "Updates dependencies"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun outdated
+      - bun update {{.CLI_ARGS}}
+
+  why:
+    desc: "Shows dependency trees"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun pm list --all
+      - bun pm why {{.CLI_ARGS | default "'*'" }}
+
+  fmt:
+    desc: "Formats the code"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun x dprint fmt {{.CLI_ARGS}}
+
+  fmt:update:force:
+    desc: "Updates the formatter plugins (clears the cache first)"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun x dprint clear-cache {{.CLI_ARGS}}
+      - task fmt:update
+
+  fmt:update:
+    desc: "Updates the formatter plugins"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun x dprint config add typescript
+      - bun x dprint config add g-plane/markup_fmt
+      - bun x dprint config add g-plane/malva
+      - bun x dprint config add json
+      - bun x dprint config add toml
+      - bun x dprint config add markdown
+      - bun x dprint config add dockerfile
+      - bun x dprint config add g-plane/pretty_yaml
+      # - bun x dprint config add ruff
+      # - bun x dprint config add sql
+      # - bun x dprint config add "https://github.com/mridang/dprint-go/releases/download/v1.4.0/shfmt.wasm"
+
+  fmt:nix:
+    desc: "Formats nix files"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - alejandra {{.CLI_ARGS | default "."}}
+
+  tsc:
+    desc: "Runs bun x tsc"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun x --bun tsc {{.CLI_ARGS}}
+
+  tsgo:
+    desc: "Runs bun x tsgo"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun x --bun -p "@typescript/native-preview${BUNX_VERSION-"@latest"}" tsgo {{.CLI_ARGS}}
+
+  check:
+    desc: "Runs bun run check"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run check {{.CLI_ARGS}}
+      - bun run madge-circular
+
+  docs:
+    desc: "Runs bun run docs"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run docs {{.CLI_ARGS}}
+
+  docs:md:
+    desc: "Runs bun run docs-md"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run docs-md {{.CLI_ARGS}}
+
+  docs:md:init:
+    desc: "Installs dependencies for docs-md"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add -D typedoc typedoc-plugin-markdown
+
+  test:
+    desc: "Runs bun run test"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run test {{.CLI_ARGS}}
+    env:
+      PORT: "{{.APP_PORT}}"
+      NODE_ENV: "production"
+
+  test:create:
+    desc: "Tests this repo with bun create"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      OUT: "/tmp/{{.PROJ}}-test-create/{{now | unixEpoch}}"
+    cmds:
+      - bun create {{.PROJ}} {{.OUT}} {{.CLI_ARGS}}
+    env:
+      BUN_CREATE_DIR: "{{.ROOT_DIR}}/.."
+
+  test:create:clean:
+    desc: "Cleans up the test create dirs"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - rm -rf /tmp/{{.PROJ}}-test-create
+
+  clean:
+    desc: "Cleans the project."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - echo cleaning...
+
+  clean:mrproper:
+    desc: "Cleans (mrproper) the project."
+    prompt: "Run mrproper?"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - rm -rf node_modules out || true
+      - rm -rf "{{.IMG_BUN_DIR}}" || true
+      - podman image rm {{.IMG_BUILDER}} {{.IMG_BASE}} {{.IMG}} || true
+      - podman image rm {{.IMG_BUILDER}}-musl {{.IMG_BASE}}-musl {{.IMG}}-musl || true
+      - podman volume rm {{.PROJ}} || true
+
+  lint:monorepo:
+    desc: "Runs monorepo linter (https://github.com/QuiiBz/sherif)"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      EXTRA_ARGS: "{{.EXTRA_ARGS | default .CLI_ARGS}}"
+    cmds:
+      - bun x "sherif${BUNX_VERSION-"@latest"}" {{.EXTRA_ARGS}}
+
+  varlock:
+    desc: "Runs varlock (https://varlock.dev/)"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      EXTRA_ARGS: '{{.EXTRA_ARGS | default (.CLI_ARGS | default "load")}}'
+    cmds:
+      - bun x --bun "varlock${BUNX_VERSION-"@latest"}" {{.EXTRA_ARGS}}
+    env:
+      VARLOCK_TELEMETRY_DISABLED: "1"
+
+  varlock:typegen:
+    desc: "Runs varlock typegen"
+    cmds:
+      - task: varlock
+        vars:
+          EXTRA_ARGS: "typegen"
+
+  varlock:lint:
+    desc: "Runs varlock linting"
+    cmds:
+      - task: varlock
+        vars:
+          EXTRA_ARGS: "load --agent --compact"
+
+  deps:fast-check:
+    desc: "Adds fast-check dependencies. (https://fast-check.dev/)"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add -D fast-check
+      - task: ai:skills:add
+        vars:
+          EXTRA_ADD_ARGS: "dubzzz/fast-check --skill javascript-testing-expert"
+
+  deps:effect:
+    desc: "Adds effect-ts dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add effect @effect/platform @effect/platform-bun
+      - bun add -D @effect/language-service @effect-patterns/ep-cli effect-solutions
+      - sed -i -e 's/\/\/[[:space:]]*PLUGIN-EFFECT-LS[[:space:]]*//' tsconfig.json
+      - mkdir -p docs && bun x effect-solutions show $(bun x effect-solutions list | grep  '^[^ ]' | cut -f 1 -d ' ') > docs/effect-solutions.md
+
+  deps:effect:vitest:
+    desc: "Adds effect-ts vitest dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add -D vitest @effect/vitest
+      - sed -i -e 's/\/\/[[:space:]]*VITEST[[:space:]]*//' .vscode/settings.json
+
+  deps:effect:telemetry:
+    desc: "Adds effect-ts telemetry dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @effect/opentelemetry @effect/experimental
+      # Download telemetry.ts (https://gist.github.com/cmbntr/63d27156e8bb2b34f33441c62be73a33)
+      - curl -o 'src/telemetry.ts' 'https://gist.githubusercontent.com/cmbntr/63d27156e8bb2b34f33441c62be73a33/raw/6de84b8e92bdeeb33a7d3431434617b542dc1bcb/telemetry.ts'
+
+  deps:effect:telemetry:sdk:
+    desc: "Adds effect-ts telemetry dependencies (with JavaScript SDK)."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @effect/opentelemetry @effect/experimental @opentelemetry/exporter-trace-otlp-proto @opentelemetry/sdk-trace-base @opentelemetry/sdk-trace-node @opentelemetry/sdk-trace-web
+
+  deps:effect:sqlite:
+    desc: "Adds effect-ts sqlite dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @effect/sql @effect/sql-sqlite-bun
+
+  deps:effect:libsql:
+    desc: "Adds effect-ts libsql dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @effect/sql @effect/sql-libsql
+
+  deps:effect:drizzle:
+    desc: "Adds effect-ts drizzle dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @effect/sql @effect/sql-drizzle drizzle-orm
+      - bun add --dev drizzle-kit @libsql/client
+
+  deps:nats:
+    desc: "Adds NATS dependencies. (https://github.com/nats-io/nats.js)"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @nats-io/nats-core @nats-io/jetstream @nats-io/transport-node
+      # - bun add @nats-io/kv @nats-io/obj
+      # - bun add @nats-io/services
+
+  deps:datastar:
+    desc: "Adds datastar dependencies. (https://github.com/starfederation/datastar-typescript)"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @starfederation/datastar-sdk
+      - mkdir static || true
+      - curl -L -o 'static/datastar.js' "https://cdn.jsdelivr.net/gh/starfederation/datastar@${DATASTAR_VERSION}/bundles/datastar.js"
+      - curl -L -o 'static/datastar.js.map' "https://cdn.jsdelivr.net/gh/starfederation/datastar@${DATASTAR_VERSION}/bundles/datastar.js.map"
+    env:
+      DATASTAR_VERSION: "1.0.2"
+
+  deps:kitajs:
+    desc: "Adds kitajs dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @kitajs/html
+      - bun add -D @kitajs/ts-html-plugin
+      - sed -i -e 's/\/\/[[:space:]]*JSX-KITAJS[[:space:]]*//' tsconfig.json
+      - sed -i -e 's/\/\/[[:space:]]*PLUGIN-KITAJS-LS[[:space:]]*//' tsconfig.json
+
+  deps:cheerio:
+    desc: "Adds cheerio dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add cheerio domhandler
+
+  deps:temporal:
+    desc: "Adds Temporal pollyfill."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add temporal-polyfill-lite # https://github.com/fabon-f/temporal-polyfill-lite
+  # - bun add temporal-polyfill # https://github.com/fullcalendar/temporal-polyfill
+
+  drizzle:
+    desc: "Runs drizzle"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun x drizzle-kit {{.CLI_ARGS}}
+
+  drizzle:export:
+    desc: "Runs drizzle export to generate src/db/schema.sql"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - task drizzle -- export | sed -E -e 's|^CREATE ([^`]+) `|--###\nCREATE \1 IF NOT EXISTS `|' | tee src/db/schema.sql
+
+  datasette:
+    desc: "Runs Datasette. (https://datasette.io/)"
+    dir: "{{.ROOT_DIR}}"
+    cmd: >
+      uvx --from datasette
+      datasette serve -h 0.0.0.0 -p 8001
+      --setting base_url / --cors
+      --setting sql_time_limit_ms 60000
+      --setting facet_time_limit_ms 15000
+      --setting suggest_facets off
+      --setting max_csv_mb 0
+      --setting truncate_cells_html 0
+      --crossdb *.db
+
+  nats:
+    desc: "Runs NATS Server"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      NATS_BASE_MB: "128"
+      MAX_MEM_STORE_MB: "384"
+      GOMEMLIMIT_BYTES:
+        sh: |
+          echo $(( ({{.MAX_MEM_STORE_MB}} + {{.NATS_BASE_MB}}) * 1024 * 1024 ))
+    cmds:
+      - >
+        podman run --rm -it --name {{.PROJ}}-nats --env-host=false --read-only -u 12345:0
+        -e GOMEMLIMIT={{.GOMEMLIMIT_BYTES}} -e GODEBUG=gctrace=1
+        -p 4222:4222 -p 8222:8222
+        --pull=${PULL:newer} docker.io/library/nats:2-alpine
+        nats-server --cluster_name NATS --server_name {{.PROJ}}-nats
+        --port 4222 --http_port 8222 --jetstream {{.CLI_ARGS}}
+
+  nats:cli:
+    desc: "Runs NATS CLI."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - nix-shell -p natscli --command "nats {{.CLI_ARGS}}"
+
+  nats:top:
+    desc: "Runs nats-top."
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmds:
+      - nix-shell -p nats-top --command "nats-top {{.CLI_ARGS}}"
+
+  compile:
+    desc: "Compiles {{.ENTRY_TS}} for {{ARCH}}"
+    vars:
+      TGT: '{{if eq ARCH "arm64"}}bun-linux-arm64{{else}}bun-linux-x64-modern{{end}}'
+    cmds:
+      - bun install --frozen-lockfile --omit=optional {{.CLI_ARGS}}
+      - bun build --minify-syntax --minify-whitespace --sourcemap --compile --target={{.TGT}} --outfile=out/{{.PROJ}} {{.ENTRY_TS}} {{.ASSETS}}
+      - chmod 755 out/{{.PROJ}}
+      # - upx -9 out/{{.PROJ}} # https://github.com/oven-sh/bun/issues/10051
+      # - mkdir -p out/node_modules/@libsql/ && cp-a node_modules/@libsql/linux-*-gnu out/node_modules/@libsql/
+
+  compile:init:
+    desc: "Prepares the compiler for {{ARCH}}"
+    vars:
+      TGT: '{{if eq ARCH "arm64"}}bun-linux-arm64{{else}}bun-linux-x64-modern{{end}}'
+    cmds:
+      - touch empty.ts
+      - bun build empty.ts --minify-syntax --minify-whitespace --sourcemap --compile --target={{.TGT}} --outfile=out/empty
+      - rm empty.ts out/empty
+
+  compile:musl:
+    desc: "Compiles {{.ENTRY_TS}} for MUSL {{ARCH}}"
+    vars:
+      TGT: '{{if eq ARCH "arm64"}}bun-linux-arm64-musl{{else}}bun-linux-x64-musl-modern{{end}}'
+    cmds:
+      - bun install --frozen-lockfile --omit=optional {{.CLI_ARGS}}
+      - bun build --minify-syntax --minify-whitespace --sourcemap --compile --target={{.TGT}} --outfile=out/{{.PROJ}} {{.ENTRY_TS}} {{.ASSETS}}
+      - chmod 755 out/{{.PROJ}}
+      # - upx -9 out/{{.PROJ}} # https://github.com/oven-sh/bun/issues/10051
+      # - mkdir -p out/node_modules/@libsql/ && cp-a node_modules/@libsql/linux-*-musl out/node_modules/@libsql/
+
+  compile:musl:init:
+    desc: "Prepares the compiler for MUSL {{ARCH}}"
+    vars:
+      TGT: '{{if eq ARCH "arm64"}}bun-linux-arm64-musl{{else}}bun-linux-x64-musl-modern{{end}}'
+    cmds:
+      - touch empty.ts
+      - bun build empty.ts --minify-syntax --minify-whitespace --sourcemap --compile --target={{.TGT}} --outfile=out/empty
+      - rm empty.ts out/empty
+
+  compile:macos:
+    desc: "Compiles {{.ENTRY_TS}} for macOS arm64"
+    vars:
+      tgt: "bun-darwin-arm64"
+    cmds:
+      - bun install --frozen-lockfile --omit=optional {{.CLI_ARGS}}
+      - bun build --minify-syntax --minify-whitespace --sourcemap --compile --target={{.tgt}} --outfile=out/{{.PROJ}}-macos {{.ENTRY_TS}} {{.ASSETS}}
+      # - mkdir -p out/node_modules/@libsql/ && cp-a node_modules/@libsql/linux-*-gnu out/node_modules/@libsql/
+
+  compile:win:
+    desc: "Compiles {{.ENTRY_TS}} for win x64"
+    vars:
+      tgt: "bun-windows-x64-modern"
+    cmds:
+      - bun install --frozen-lockfile --omit=optional {{.CLI_ARGS}}
+      - bun build --minify-syntax --minify-whitespace --sourcemap --compile --target={{.tgt}} --outfile=out/{{.PROJ}} {{.ENTRY_TS}} {{.ASSETS}}
+      # - mkdir -p out/node_modules/@libsql/ && cp-a node_modules/@libsql/linux-*-gnu out/node_modules/@libsql/
+
+  img:init:
+    internal: true
+    cmds:
+      - mkdir -p "{{.IMG_BUN_DIR}}" || true
+      - echo "await Bun.write('{{.IMG_BUN_DIR}}/CACHEDIR.TAG',atob('U2lnbmF0dXJlOiA4YTQ3N2Y1OTdkMjhkMTcyNzg5ZjA2ODg2ODA2YmM1NQo='))" | bun run -
+
+  img:builder:
+    desc: "Builds {{.IMG_BUILDER}}"
+    dir: "{{.ROOT_DIR}}"
+    deps:
+      - img:init
+    cmds:
+      - touch extra-certs.pem
+      - >
+        if [ -z $SKIP_PULL ]; then
+          podman pull {{.IMG_BUILDER_FROM}}
+        else
+          echo "NO PULL"
+        fi
+      - podman build --volume {{.IMG_BUN_DIR}}:/root/.bun --ignorefile .dockerignore --build-arg BUILDER={{.IMG_BUILDER_FROM}} -t "{{.IMG_BUILDER}}" -f Dockerfile-builder .
+
+  img:base:
+    desc: "Builds {{.IMG_BASE}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - touch extra-certs.pem
+      - >
+        if [ -z $SKIP_PULL ]; then
+          podman pull {{.IMG_BASE_FROM}}
+        else
+          echo "NO PULL"
+        fi
+      - podman build --ignorefile .dockerignore --build-arg BASE={{.IMG_BASE_FROM}} -t "{{.IMG_BASE}}" -f Dockerfile-base {{.CLI_ARGS}} .
+
+  img:build:
+    desc: "Builds {{.IMG}} with {{.IMG_BUILDER}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman build --volume {{.IMG_BUN_DIR}}:/root/.bun --ignorefile .dockerignore --build-arg BASE={{.IMG_BASE}} --build-arg  BUILDER="{{.IMG_BUILDER}}" --build-arg PROJ="{{.PROJ}}" -t "{{.IMG}}" {{.CLI_ARGS}} .
+      # - podman inspect "{{.IMG}}"
+
+  img:
+    desc: "Builds {{.IMG}}"
+    cmds:
+      - task: img:builder
+      - task: img:base
+      - task: img:build
+
+  img:run:
+    desc: "Runs {{.IMG}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman volume create {{.PROJ}} || true
+      - >
+        podman run --name {{.PROJ}} --rm -it --user "${PODMAN_USER-'12345:0'}"
+        -e OTEL_EFFECT=false -e OTEL_EXPORTER_OTLP_ENDPOINT=http://host.containers.internal:4318
+        --http-proxy=false --env-host=false --env PORT={{.APP_PORT}} -p {{.APP_PORT}}:{{.APP_PORT}}
+        --env-file=.env.local
+        -v "{{.PROJ}}:/data"
+        "{{.IMG}}" {{.CLI_ARGS}}
+
+  img:enter:
+    desc: "Enters running {{.IMG}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman exec -it --user "${PODMAN_USER-'12345:0'}" {{.PROJ}} {{.CLI_ARGS | default "/bin/bash"}}
+
+  img:builder:musl:
+    desc: "Builds {{.IMG_BUILDER}}-musl"
+    dir: "{{.ROOT_DIR}}"
+    deps:
+      - img:init
+    cmds:
+      - touch extra-certs.pem
+      - >
+        if [ -z $SKIP_PULL ]; then
+          podman pull {{.IMG_MUSL_BUILDER_FROM}}
+        else
+          echo "NO PULL"
+        fi
+      - podman build --volume {{.IMG_BUN_DIR}}:/root/.bun --ignorefile .dockerignore --build-arg BUILDER={{.IMG_MUSL_BUILDER_FROM}} -t "{{.IMG_BUILDER}}-musl" -f Dockerfile-builder-musl .
+
+  img:base:musl:
+    desc: "Builds {{.IMG_BASE}}-musl"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - touch extra-certs.pem
+      - >
+        if [ -z $SKIP_PULL ]; then
+          podman pull {{.IMG_MUSL_BASE_FROM}}
+        else
+          echo "NO PULL"
+        fi
+      - podman build --ignorefile .dockerignore --build-arg BASE={{.IMG_MUSL_BASE_FROM}} -t "{{.IMG_BASE}}-musl" -f Dockerfile-base-musl {{.CLI_ARGS}} .
+
+  img:build:musl:
+    desc: "Builds {{.IMG}}-musl with {{.IMG_BUILDER}}-musl"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman build --volume {{.IMG_BUN_DIR}}:/root/.bun --ignorefile .dockerignore --build-arg BASE={{.IMG_BASE}}-musl --build-arg BUILDER="{{.IMG_BUILDER}}-musl" --build-arg PROJ="{{.PROJ}}" -t "{{.IMG}}-musl" -f Dockerfile-musl {{.CLI_ARGS}} .
+      # - podman inspect "{{.IMG}}-musl"
+
+  img:musl:
+    desc: "Builds {{.IMG}}-musl"
+    cmds:
+      - task: img:builder:musl
+      - task: img:base:musl
+      - task: img:build:musl
+
+  img:run:musl:
+    desc: "Runs {{.IMG}}-musl"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman volume create {{.PROJ}} || true
+      - >
+        podman run --name {{.PROJ}}-musl --rm -it --user "${PODMAN_USER-'12345:0'}"
+        -e OTEL_EFFECT=false -e OTEL_EXPORTER_OTLP_ENDPOINT=http://host.containers.internal:4318
+        --http-proxy=false --env-host=false --env PORT={{.APP_PORT}} -p {{.APP_PORT}}:{{.APP_PORT}}
+        --env-file=.env.local
+        -v "{{.PROJ}}:/data"
+        "{{.IMG}}-musl" {{.CLI_ARGS}}
+
+  img:enter:musl:
+    desc: "Enters running {{.IMG}}-musl"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman exec -it --user "${PODMAN_USER-'12345:0'}" {{.PROJ}}-musl {{.CLI_ARGS | default "/bin/sh"}}
+
+  skopeo:inspect:img:
+    desc: "Inspects {{.IMG}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - skopeo inspect {{.CLI_ARGS}} "containers-storage:{{.IMG}}"
+
+  skopeo:inspect:img:musl:
+    desc: "Inspects {{.IMG}}-musl"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - skopeo inspect {{.CLI_ARGS}} "containers-storage:{{.IMG}}-musl"
+
+  flake:update:
+    desc: "Updates flake.lock"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - nix flake update --refresh {{.CLI_ARGS}}
+
+  flake:check:
+    desc: "Check flake.lock"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - nix-shell -p flake-checker --command "flake-checker {{.CLI_ARGS}}"
+
+  wrangler:
+    desc: "Runs the cloudflare wrangler CLI"
+    interactive: true
+    cmds:
+      - bun x --bun wrangler {{.CLI_ARGS}}
+
+  fly:app:
+    desc: "Create app and deploy to fly.io"
+    cmds:
+      - task: fly:app:login
+      - task: fly:app:launch
+      - task: fly:app:img:push:musl
+      - task: fly:app:deploy
+      - task: fly:app:status
+
+  fly:app:login:
+    desc: "Logs in to fly.io"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmds:
+      - flyctl auth whoami --json | jq -r .email || flyctl auth login {{.CLI_ARGS}}
+
+  fly:app:status:
+    desc: "Shows the status of the fly app"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - flyctl status --app "{{.PROJ}}" {{.CLI_ARGS}}
+      - flyctl tokens list
+      - flyctl ips list
+
+  fly:app:launch:
+    desc: "Creates a new fly app"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmds:
+      - flyctl launch --yaml --name "{{.PROJ}}" --region fra --vm-cpu-kind shared --vm-cpus 1 --vm-memory 256 --internal-port {{.APP_PORT}} --image "registry.fly.io/{{.PROJ}}:latest" --no-github-workflow --no-deploy {{.CLI_ARGS}}
+
+  fly:app:img:push:musl:
+    desc: "Pushes the {{.IMG}}-musl image to registry.fly.io"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      FLY_DEPLOY_TOKEN:
+        sh: flyctl tokens create deploy --app "{{.PROJ}}" --expiry 180s
+    cmds:
+      - skopeo copy {{.CLI_ARGS}} --dest-creds x:"{{.FLY_DEPLOY_TOKEN}}" "containers-storage:{{.IMG}}-musl" docker://registry.fly.io/{{.PROJ}}:latest
+      - skopeo inspect --creds x:"{{.FLY_DEPLOY_TOKEN}}" docker://registry.fly.io/{{.PROJ}}:latest
+      - flyctl image show --json
+
+  fly:app:deploy:
+    desc: "Deploys the fly app"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - flyctl deploy --app "{{.PROJ}}" --flycast --max-concurrent 1 --ha=false --strategy immediate --image "registry.fly.io/{{.PROJ}}:latest" {{.CLI_ARGS}}
+
+  fly:app:expose:
+    desc: "Exposes the fly app to the public internet"
+    dir: "{{.ROOT_DIR}}"
+    prompt: "Expose fly app {{.PROJ}} to the public internet ?"
+    cmds:
+      - flyctl ips allocate-v6
+      - flyctl ips allocate-v6 --region fra
+      - flyctl ips allocate-v4 --shared
+      - flyctl ips list
+
+  fly:app:machine:restart:
+    desc: "Restarts the fly app machine"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      FLY_MACHINE_ID:
+        sh: flyctl status --app "{{.PROJ}}" --json | jq '.Machines[0].id'
+    cmds:
+      - flyctl machine restart {{.CLI_ARGS}} "{{.FLY_MACHINE_ID}}"
+
+  fly:app:machine:oha:
+    desc: "Runs oha against the fly app machine"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      FLY_PRIVATE_IP:
+        sh: flyctl status --app "{{.PROJ}}" --json | jq '.Machines[0].private_ip'
+    interactive: true
+    cmds:
+      - oha {{.CLI_ARGS}} "http://[{{.FLY_PRIVATE_IP}}]:{{.APP_PORT}}/healtz"
+
+  fly:app:oha:
+    desc: "Runs oha against the fly app"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      FLY_HOSTNAME:
+        sh: flyctl status --app "{{.PROJ}}" --json | jq -r '.Hostname'
+    interactive: true
+    cmds:
+      - oha {{.CLI_ARGS}} "https://{{.FLY_HOSTNAME}}/healtz"
+
+  fly:app:destroy:
+    desc: "Destroys the fly app"
+    dir: "{{.ROOT_DIR}}"
+    prompt: "Destroy fly app {{.PROJ}} ?"
+    cmds:
+      - flyctl apps destroy {{.CLI_ARGS}} "{{.PROJ}}"
+
+  otel:gonzo:
+    desc: "Runs Gonzo - The TUI for log analysis"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmd: nix run "nixpkgs#gonzo" -- --otlp-enabled --otlp-http-port=${GONZO_OTLP_HTTP_PORT-"4318"} {{.CLI_ARGS}}
+    env:
+      # GONZO_OTLP_HTTP_PORT: 14318
+      GONZO_LOG_BUFFER: "1000"
+      GONZO_MEMORY_SIZE: "10000"
+
+  otel:gonzo:ai:
+    desc: "Runs Gonzo - The TUI for log analysis"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmd: nix run "nixpkgs#gonzo" -- --ai-model="gpt-5-mini" --otlp-enabled --otlp-http-port=${GONZO_OTLP_HTTP_PORT-"4318"} {{.CLI_ARGS}}
+    env:
+      OPENAI_API_KEY: "sk-none"
+      OPENAI_API_BASE: "http://aiproxy.unicorn-tegu.ts.net/v1"
+      # GONZO_OTLP_HTTP_PORT: 14318
+      GONZO_LOG_BUFFER: "1000"
+      GONZO_MEMORY_SIZE: "10000"
+
+  otel:lgtm:
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmd: >
+      podman run --rm -it --name "{{.PROJ}}-lgtm"
+      -p 4317-4318:4317-4318 -p 4000:3000
+      --pull=${PULL:newer} docker.io/grafana/otel-lgtm
+      {{.CLI_ARGS}}
+
+  otel:hyperdx:
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmd: >
+      podman run --rm -it --name "{{.PROJ}}-hyperdx"
+      -p 4317-4318:4317-4318 -p 8080:8080
+      -e IS_LOCAL_APP_MODE="${IS_LOCAL_APP_MODE}" -e USAGE_STATS_ENABLED=false
+      --pull=${PULL:newer} docker.io/hyperdx/hyperdx-all-in-one:latest
+      --entrypoint "/bin/bash" -c "source /etc/local/entry.base.sh"
+    env:
+      IS_LOCAL_APP_MODE: "REQUIRED_AUTH" # "DANGEROUSLY_is_local_app_mode💀"
+
+  otel:jaeger:
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmd: >
+      podman run --rm -it --name "{{.PROJ}}-jaeger"
+      -p 4317-4318:4317-4318  -p 16686:16686
+      -e COLLECTOR_OTLP_ENABLED=true -e QUERY_BASE_PATH=/
+      --pull=${PULL:newer} docker.io/jaegertracing/jaeger:latest
+      {{.CLI_ARGS}}
+
+  otel:jaeger:v1:
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmd: >
+      podman run --rm -it --name "{{.PROJ}}-jaeger"
+      -p 4317-4318:4317-4318  -p 16686:16686
+      -e COLLECTOR_OTLP_ENABLED=true -e QUERY_BASE_PATH=/
+      --pull=${PULL:newer} docker.io/jaegertracing/all-in-one:latest
+      {{.CLI_ARGS | default "--collector.otlp.http.cors.allowed-headers=* --collector.otlp.http.tls.enabled=false"}}
+
+  otel:fluentbit:
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    vars:
+      LOG_DIR: "{{.ROOT_DIR}}/logs"
+      CONFIG_FILE: "{{.LOG_DIR}}/fluent-bit.conf"
+    cmds:
+      - |
+        mkdir -p {{.LOG_DIR}}
+        if [ ! -f {{.CONFIG_FILE}} ]; then
+          cat <<EOF > {{.CONFIG_FILE}}
+        [SERVICE]
+            Flush        1
+            Log_Level    info
+            HTTP_Server  On
+            HTTP_Listen  0.0.0.0
+            HTTP_Port    2020
+            Health_Check On
+
+        [INPUT]
+            Name         http
+            Listen       0.0.0.0
+            Port         8888
+
+        [INPUT]
+            Name         opentelemetry
+            Listen       0.0.0.0
+            Port         4318
+
+        [OUTPUT]
+            Name         stdout
+            Match        *
+            Format       json_lines
+
+        [OUTPUT]
+            Name         file
+            Match        *
+            Path         /logs
+            File         fluent-bit.log
+            Format       ltsv
+            Delimiter    \t
+            Label_Delimiter =
+        EOF
+        fi
+      - >
+        podman run --rm -it --name {{.PROJ}}-fluentbit --env-host=false --read-only --userns=keep-id -u "$(id -u):$(id -g)"
+        -v {{.CONFIG_FILE}}:/fluent-bit/etc/fluent-bit.conf:ro,z
+        -v {{.LOG_DIR}}:/logs:rw,z
+        -p 4318:4318 -p 8888:8888 -p 2020:2020
+        --pull=${PULL:newer} docker.io/fluent/fluent-bit:latest {{.CLI_ARGS}}
+
+  ai:openspec:
+    desc: "Run openspec CLI (https://github.com/Fission-AI/OpenSpec)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    silent: true
+    aliases:
+      - spec
+    env:
+      CODEX_HOME: "{{.ROOT_DIR}}/.codex"
+      OPENCODE_CONFIG_DIR: "{{.ROOT_DIR}}/.opencode"
+      PI_CODING_AGENT_DIR: "{{.ROOT_DIR}}/.pi/home"
+    cmds:
+      - bun x --silent --bun --package @fission-ai/openspec@{{.OPENSPEC_VERSION}} openspec {{.CLI_ARGS | default "view"}}
+
+  ai:openspec:glow:
+    desc: "View openspec artefacts"
+    dir: "{{.ROOT_DIR}}/openspec"
+    interactive: true
+    cmds:
+      - glow --all --tui --line-numbers "$( { printf '%s\n' project.md; find specs changes -mindepth 1 -maxdepth 1 -type d ! -path 'changes/archive*' -print; } | fzf -1 -0 -q '{{.CLI_ARGS}}' --prompt='View > ' --header=$'What do you want to view?')"
+
+  ai:openspec:init:
+    desc: "Run openspec init (https://github.com/Fission-AI/OpenSpec)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    env:
+      CODEX_HOME: "{{.ROOT_DIR}}/.codex"
+      OPENCODE_CONFIG_DIR: "{{.ROOT_DIR}}/.opencode"
+      PI_CODING_AGENT_DIR: "{{.ROOT_DIR}}/.pi/home"
+    cmds:
+      - bun x --bun @fission-ai/openspec@{{.OPENSPEC_VERSION}} init --tools opencode {{.CLI_ARGS}}
+
+  ai:taskmaster:
+    desc: "Run task-master CLI (https://www.task-master.dev/)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    env:
+      OPENAI_API_KEY: "sk-none"
+      OPENAI_BASE_URL: "http://aiproxy.unicorn-tegu.ts.net/v1"
+    cmds:
+      - bun x --bun -p task-master-ai@latest task-master {{.CLI_ARGS | default "--help"}}
+
+  ai:gemini:cli:
+    desc: "Start Gemini CLI (https://github.com/google-gemini/gemini-cli"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    env:
+      GEMINI_SANDBOX: "false" # podman
+    # NO_COLOR: "true"
+    cmds:
+      - touch AGENTS.md
+      - bun x --bun -p @google/gemini-cli@latest gemini {{.CLI_ARGS}}
+
+  ai:gemini:ext:conductor:
+    cmds:
+      - bun x --bun -p @google/gemini-cli@latest gemini extensions install https://github.com/gemini-cli-extensions/conductor {{.CLI_ARGS | default "--auto-update"}}
+
+  ai:codex:cli:
+    desc: "Start Codex CLI (https://github.com/openai/codex)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    env:
+      OPENAI_API_KEY: "sk-none"
+      OPENAI_BASE_URL: "http://aiproxy.unicorn-tegu.ts.net/v1"
+      CODEX_HOME: "{{.ROOT_DIR}}/.codex"
+    cmds:
+      - touch AGENTS.md
+      - bun x --bun @openai/codex@latest {{.CLI_ARGS}}
+
+  ai:pi:
+    desc: "Start pi (https://pi.dev/)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    aliases:
+      - pi
+    vars:
+      EXTRA_ARGS: "{{.EXTRA_ARGS | default .CLI_ARGS}}"
+    env:
+      PI_CODING_AGENT_DIR: "{{.ROOT_DIR}}/.pi/home"
+      PI_CODING_AGENT_SESSION_DIR: "{{.ROOT_DIR}}/.pi/sessions"
+      PI_OFFLINE: "1"
+      PI_TELEMETRY: "0"
+      PI_SKIP_VERSION_CHECK: "1"
+      RTK_TELEMETRY_DISABLED: "1"
+      OTEL_SERVICE_NAME: "opencode"
+      OTEL_TRACES_EXPORTER: "otlp"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318"
+    cmds:
+      - touch AGENTS.md
+      - nix-shell --option tarball-ttl "${NIX_TTL:-86400}" --impure -p typescript-language-server -p bun --command "bun x --bun \"@earendil-works/pi-coding-agent${BUNX_VERSION-"@latest"}\" {{.EXTRA_ARGS}}"
+
+  ai:pi:models:
+    desc: "List pi models"
+    cmds:
+      - task: ai:pi
+        vars:
+          EXTRA_ARGS: "--list-models"
+
+  ai:opencode:
+    desc: "Start OpenCode (https://opencode.ai/)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    aliases:
+      - oco
+    vars:
+      EXTRA_ARGS: "{{.EXTRA_ARGS | default .CLI_ARGS}}"
+    env:
+      OPENAI_API_KEY: "sk-none"
+      OPENAI_BASE_URL: "http://aiproxy.unicorn-tegu.ts.net/v1"
+      OPENCODE_CONFIG_DIR: "{{.ROOT_DIR}}/.opencode"
+      OPENCODE_DISABLE_CLAUDE_CODE: "true"
+      OPENCODE_DISABLE_LSP_DOWNLOAD: "true"
+      OPENCODE_ENABLE_QUESTION_TOOL: "true"
+      OPENCODE_EXPERIMENTAL_WORKSPACES: "false"
+      OPENCODE_EXPERIMENTAL_LSP_TOOL: "true"
+      OPENCODE_EXPERIMENTAL_SCOUT: "false"
+      RTK_TELEMETRY_DISABLED: "1"
+      OTEL_SERVICE_NAME: "opencode"
+      OTEL_TRACES_EXPORTER: "otlp"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318"
+    cmds:
+      - touch AGENTS.md
+      - nix-shell --option tarball-ttl "${NIX_TTL:-86400}" --impure -p typescript-language-server -p bun --command "bun x --bun \"opencode-ai${BUNX_VERSION-"@latest"}\" {{.EXTRA_ARGS}}"
+      # - bun x --bun \"opencode-ai${BUNX_VERSION-"@latest"}\" {{.CLI_ARGS}}
+
+  ai:opencode:models:
+    desc: "List OpenCode models"
+    cmds:
+      - task: ai:opencode
+        vars:
+          EXTRA_ARGS: "models"
+
+  ai:opencode:agents:
+    desc: "List OpenCode agents"
+    cmds:
+      - task: ai:opencode
+        vars:
+          EXTRA_ARGS: "agent list"
+
+  ai:rtk:
+    desc: "Run rtk (https://github.com/rtk-ai/rtk)"
+    dir: "{{.ROOT_DIR}}"
+    aliases:
+      - rtk
+    env:
+      CODEX_HOME: "{{.ROOT_DIR}}/.codex"
+      OPENCODE_CONFIG_DIR: "{{.ROOT_DIR}}/.opencode"
+      PI_CODING_AGENT_DIR: "{{.ROOT_DIR}}/.pi/home"
+      RTK_TELEMETRY_DISABLED: "1"
+    cmds:
+      - rtk {{.CLI_ARGS | default "gain"}}
+
+  ai:skills:
+    desc: "Start skills cli (https://github.com/vercel-labs/skills)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    vars:
+      EXTRA_ARGS: '{{.EXTRA_ARGS | default (.CLI_ARGS | default "list")}}'
+    env:
+      OPENCODE_CONFIG_DIR: "{{.ROOT_DIR}}/.opencode"
+    cmds:
+      - nix-shell --option tarball-ttl "${NIX_TTL:-86400}" --impure -p typescript-language-server -p bun --command "bun x --bun \"skills${BUNX_VERSION-"@latest"}\" {{.EXTRA_ARGS}}"
+
+  ai:skills:update:
+    desc: "Updates installed skills"
+    cmds:
+      - task: ai:skills
+        vars:
+          EXTRA_ARGS: 'update {{.CLI_ARGS | default "--yes --project"}}'
+
+  ai:skills:add:
+    desc: "Adds skills"
+    vars:
+      ADD_AGENTS: "--agent opencode" # --agent pi"
+      EXTRA_ADD_ARGS: "{{.EXTRA_ADD_ARGS | default .CLI_ARGS}}"
+    cmds:
+      - task: ai:skills
+        vars:
+          EXTRA_ARGS: "add {{.ADD_AGENTS}} --yes {{.EXTRA_ADD_ARGS}}"
+
+  ai:skills:add:cmbntr:
+    desc: "Installs cmbntr skills (https://github.com/cmbntr/skills)"
+    cmds:
+      - task: ai:skills:add
+        vars:
+          EXTRA_ADD_ARGS: "cmbntr/skills {{.CLI_ARGS}}"
+
+  ai:skills:add:mattpocock:
+    desc: "Installs Matt Pocock skills (https://github.com/mattpocock/skills)"
+    cmds:
+      - task: ai:skills:add
+        vars:
+          EXTRA_ADD_ARGS: "mattpocock/skills {{.CLI_ARGS}}"
+
+  ai:skills:add:effect:
+    desc: "Installs Effect-TS skills (https://github.com/Effect-TS/skills)"
+    # TODO https://github.com/lucas-barake/dotfiles/tree/main/ai
+    cmds:
+      - task: ai:skills:add
+        vars:
+          EXTRA_ADD_ARGS: "Effect-TS/skills {{.CLI_ARGS}}"
+
+  ai:skills:add:modern-web-guidance:
+    desc: "Installs Google Modern Web Guidance skills (https://developer.chrome.com/docs/modern-web-guidance)"
+    cmds:
+      - task: ai:skills:add
+        vars:
+          EXTRA_ADD_ARGS: "GoogleChrome/modern-web-guidance {{.CLI_ARGS}}"
+
+  ai:skills:add:skill-creator:
+    desc: "Installs skill-creator skill (https://github.com/anthropics/skills)"
+    cmds:
+      - task: ai:skills:add
+        vars:
+          EXTRA_ADD_ARGS: "anthropics/skills --skill skill-creator {{.CLI_ARGS}}"
+
+  ai:crush:
+    desc: "Start Crush (https://github.com/charmbracelet/crush)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    env:
+      # OPENAI_API_KEY: "sk-none"
+      # OPENAI_BASE_URL: "http://aiproxy.unicorn-tegu.ts.net/v1"
+      NIXPKGS_ALLOW_UNFREE: "1"
+      CRUSH_REDUCE_ANIMATIONS: "true"
+    cmds:
+      - touch AGENTS.md
+      - nix-shell --impure -p typescript-language-server -p crush --command "crush {{.CLI_ARGS}}"
+
+  ai:crush:log:
+    dir: "{{.ROOT_DIR}}/.crush/logs"
+    interactive: true
+    cmds:
+      - nix-shell --impure -p crush --command "crush logs {{.CLI_ARGS | default "--follow"}}"
+      # - nix-shell -p lnav --command "lnav {{.CLI_ARGS | default "."}}"
+
+  ai:btca:
+    desc: "Start btca (https://btca.dev/)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    env:
+      OPENAI_API_KEY: "sk-none"
+      OPENAI_BASE_URL: "http://aiproxy.unicorn-tegu.ts.net/v1"
+      OPENCODE_CONFIG_DIR: "{{.ROOT_DIR}}/.opencode"
+      OPENCODE_DISABLE_LSP_DOWNLOAD: "true"
+    cmds:
+      - nix-shell --impure -p typescript-language-server -p opencode -p bun --command "bun x --bun -p btca btca {{.CLI_ARGS}}"
+
+  ai:btca:config:
+    desc: "Start btca (https://btca.dev/)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    env:
+      OPENAI_API_KEY: "sk-none"
+      OPENAI_BASE_URL: "http://aiproxy.unicorn-tegu.ts.net/v1"
+      OPENCODE_CONFIG_DIR: "{{.ROOT_DIR}}/.opencode"
+      OPENCODE_DISABLE_LSP_DOWNLOAD: "true"
+    cmds:
+      - nix-shell --impure -p typescript-language-server -p opencode -p bun --command "bun x --bun -p btca btca config model -p openai -m gpt-5.2"
+      - nix-shell --impure -p typescript-language-server -p opencode -p bun --command "bun x --bun -p btca btca config repos add -n effect -u https://github.com/Effect-TS/effect -b main"
+
+  ai:mcp:mcporter:
+    desc: "Start MCPorter (https://github.com/openclaw/mcporter)"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun x mcporter {{.CLI_ARGS}}
+    env:
+      MCPORTER_CONFIG: ".mcporter.json"
+      MCPORTER_STDIO_TRACE: "0"
+      #MCPORTER_LOG_LEVEL: "debug"
+
+  ai:mcp:inspector:
+    desc: "Start MCP inspector (https://github.com/modelcontextprotocol/inspector)"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun x @modelcontextprotocol/inspector {{.CLI_ARGS}}
+
+  ai:bd:
+    desc: "Start beads (https://github.com/steveyegge/beads)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmds:
+      - task: nrgho
+        vars: {
+          APPKEY: "beads",
+          REPO: "steveyegge/beads",
+          ARGS: "{{.CLI_ARGS | default \"human\"}}",
+        }
+
+  ai:bd:form:
+    desc: "Start beads create-form (https://github.com/steveyegge/beads)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmds:
+      - task: nrgho
+        vars: { APPKEY: "beads", REPO: "steveyegge/beads", ARGS: "create-form {{.CLI_ARGS}}" }
+
+  ai:bd:killdaemons:
+    desc: "Start beads (https://github.com/steveyegge/beads)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmds:
+      - task: nrgho
+        vars: { APPKEY: "beads", REPO: "steveyegge/beads", ARGS: "daemon list" }
+      - task: nrgho
+        vars: { APPKEY: "beads", REPO: "steveyegge/beads", ARGS: "daemon killall {{.CLI_ARGS}}" }
+
+  ai:bd:init:
+    desc: "Init beads (https://github.com/steveyegge/beads)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmds:
+      - task: nrgho
+        vars: {
+          APPKEY: "beads",
+          REPO: "steveyegge/beads",
+          ARGS: "init --prefix {{.PROJ_TAG | lower}} {{.CLI_ARGS}}",
+        }
+
+  ai:bd:web:
+    desc: "Start beads WEB (https://github.com/mantoni/beads-ui)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    env:
+      PORT: "6767"
+    cmds:
+      - nix-shell -p beads -p bun --command "bd daemon --health && bun x --bun -p beads-ui bdui {{.CLI_ARGS | default "start --open"}}"
+
+  ai:bv:
+    desc: "Run beads_viewer (https://github.com/Dicklesworthstone/beads_viewer)"
+    cmds:
+      - task: nrgho
+        vars: { APPKEY: "bv", REPO: "Dicklesworthstone/beads_viewer", ARGS: "{{.CLI_ARGS}}" }
+
+  nrgh:
+    desc: "Run latest GitHub release via `nix run` (cached tag lookup)"
+    internal: true
+    silent: true
+    vars:
+      NRGH_TTL: "3600"
+    requires:
+      vars: [APPKEY, REPO]
+    cmds:
+      - |
+        set -euo pipefail
+        : "${NRGH_OPTS:=}"
+
+        appkey='{{.APPKEY}}'
+        repo='{{.REPO}}'
+        ttl='{{.NRGH_TTL}}'
+
+        cache_home="${XDG_CACHE_HOME:-$HOME/.cache}"
+        cache_dir="$cache_home/$appkey"
+        cache_file="$cache_dir/latest"
+        mkdir -p "$cache_dir"
+
+        now=$(date +%s)
+        mtime=0
+        if [[ -f "$cache_file" ]]; then
+          mtime=$(stat -c %Y "$cache_file" 2>/dev/null || echo 0)
+        fi
+        age=$(( now - mtime ))
+
+        tag=""
+        if [[ -f "$cache_file" && "$age" -lt "$ttl" ]]; then
+          tag=$(<"$cache_file")
+        else
+          tag="$(
+            gh release list -R "$repo" --json tagName -q '.[0].tagName' \
+              | tee "$cache_file"
+          )" || tag=""
+
+          if [[ -z "$tag" && -f "$cache_file" ]]; then
+            tag=$(<"$cache_file")
+          fi
+        fi
+
+        if [[ -z "$tag" ]]; then
+          echo "nrgh: could not determine latest release tag for $repo (no cache and gh failed)" >&2
+          exit 1
+        fi
+
+        # If you run: task bdl -- --foo bar
+        # then {{.CLI_ARGS}} expands to: --foo bar
+        # and gets forwarded to the program after `--`.
+        # shellcheck disable=SC2086
+        nix run $NRGH_OPTS "github:${repo}/${tag}" -- {{.ARGS}}
+
+  nrgho:
+    desc: "Run latest GitHub release via `nix run` (offline; uses cached tag)"
+    internal: true
+    requires:
+      vars: [APPKEY, REPO]
+    env:
+      NRGH_OPTS: '{{default "" .NRGH_OPTS}}{{if (default "" .NRGH_OPTS)}} {{end}}--offline'
+    cmds:
+      - task: nrgh
+        vars:
+          APPKEY: "{{.APPKEY}}"
+          REPO: "{{.REPO}}"
+          ARGS: "{{.ARGS}}"

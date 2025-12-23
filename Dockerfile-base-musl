@@ -1,0 +1,41 @@
+ARG BASE=docker.io/library/alpine:latest
+FROM $BASE
+
+USER 0:0
+
+COPY --chown=0:0 extra-certs.pem /etc/
+RUN sh -c '[ -s /etc/extra-certs.pem ] && cat /etc/extra-certs.pem >> /etc/ssl/certs/ca-certificates.crt || true'
+
+RUN addgroup -g 1000 app \
+    && adduser -u 1000 -G app -s /bin/sh -D app \
+    && apk add --no-cache ca-certificates curl coreutils libgcc libstdc++
+
+RUN sh -c '[ -s /etc/extra-certs.pem ] && csplit -s -z -f "/usr/local/share/ca-certificates/extra-cert-" -b "%02d.crt" /etc/extra-certs.pem "/-----BEGIN CERTIFICATE-----/" "{*}" && update-ca-certificates || true'
+    
+ENV TZ=Europe/Zurich
+RUN apk add --no-cache --virtual .img-tz tzdata;\
+    cp /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone;\
+    apk del .img-tz;\
+    echo /usr/share/zoneinfo/$TZ | cut -d'/' -f-5 | xargs mkdir -p;\
+    cp /etc/localtime /usr/share/zoneinfo/$TZ
+
+#ENV MIMALLOC_SHOW_STATS=1
+
+RUN sh -c 'mkdir -p /home/app; chown 1000:0 /home/app ; chmod g+rwx /home/app' && \
+    sh -c 'mkdir -p /app; chown 1000:0 /app ; chmod g+rwx /app' && \
+    sh -c 'mkdir -p /data; chown 1000:0 /data ; chmod g+rwx /data'
+
+WORKDIR /app
+ENV HOME=/home/app
+
+ENV DO_NOT_TRACK=1
+ENV NODE_ENV=production
+ENV BUN_RUNTIME_TRANSPILER_CACHE_PATH=0
+
+# ENV BUN_GARBAGE_COLLECTOR_LEVEL=0
+# ENV NODE_TLS_REJECT_UNAUTHORIZED=0
+# ENV BUN_CONFIG_MAX_HTTP_REQUESTS=64
+# ENV BUN_CONFIG_VERBOSE_FETCH=curl
+# ENV BUN_CONFIG_VERBOSE_FETCH=true
+
+USER 1000:0

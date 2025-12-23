@@ -1,0 +1,20 @@
+{
+  "recommendations": [
+    "oven.bun-vscode",
+    "effectful-tech.effect-vscode",
+    "dprint.dprint",
+    "task.vscode-task",
+    "humao.rest-client",
+    "usernamehw.errorlens",
+    "yoavbls.pretty-ts-errors",
+    "orta.vscode-twoslash-queries",
+    "tamasfe.even-better-toml",
+    "redhat.vscode-yaml",
+    "vitest.explorer",
+    "will-wow.vscode-alternate-file",
+    "kamadorueda.alejandra",
+    "tekumara.typos-vscode",
+    "planet57.vscode-beads",
+    "varlock.env-spec-language"
+  ]
+}

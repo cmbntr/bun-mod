@@ -1,0 +1,17 @@
+# Docs: https://github.com/Huachao/vscode-restclient
+
+@baseUrl = {{scheme}}://{{host}}{{port}}
+
+###
+# @name root
+GET {{baseUrl}}/
+
+###
+# @name something
+# @note
+@rootLen = {{root.response.headers.Content-Length}}
+POST {{baseUrl}}/something
+    ?len={{rootLen}}
+    &rnd={{$randomInt 0 100}}
+    &ts={{$datetime iso8601}}
+    &id={{$guid}}

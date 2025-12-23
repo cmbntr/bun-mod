@@ -1,0 +1,46 @@
+{
+  "security": {
+    "auth": {
+      "selectedType": "oauth-personal"
+    }
+  },
+  "general": {
+    "preferredEditor": "vscode",
+    "previewFeatures": true
+  },
+  "ui": {
+    "theme": "Default",
+    "hideBanner": true,
+    "accessibility": {
+      "disableLoadingPhrases": true
+    }
+  },
+  "telemetry": {
+    "enabled": false,
+    "target": "local",
+    "otlpEndpoint": "http://localhost:4317",
+    "logPrompts": false
+  },
+  "privacy": {
+    "usageStatisticsEnabled": false
+  },
+  "context": {
+    "fileName": [
+      "AGENTS.md",
+      "GEMINI.md"
+    ]
+  },
+  "tools": {
+    "sandbox": "podman"
+  },
+  "mcpServers": {
+    "effect-docs": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "exec podman run -i --rm --pull newer docker.io/timsmart/effect-mcp"
+      ],
+      "env": {}
+    }
+  }
+}

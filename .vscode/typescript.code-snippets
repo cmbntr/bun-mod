@@ -1,0 +1,152 @@
+{
+  "const zz_rnd": {
+    "prefix": "zz",
+    "scope": "typescript,typescriptreact",
+    "body": [
+      "const zz_${RANDOM_HEX} ="
+    ]
+  },
+  "Effect": {
+    "description": "Effect.",
+    "prefix": "ee",
+    "scope": "typescript,typescriptreact",
+    "body": [
+      "Effect.$0"
+    ]
+  },
+  "Effect Log": {
+    "description": "Effect.",
+    "prefix": "ll",
+    "scope": "typescript,typescriptreact",
+    "body": [
+      "Effect.log(${0}${1:${TM_SELECTED_TEXT}})"
+    ]
+  },
+  "Gen Function": {
+    "description": "Generator function",
+    "prefix": "gg",
+    "scope": "typescript,typescriptreact",
+    "body": [
+      "function* () {\n  $0\n}"
+    ]
+  },
+  "Effect Function": {
+    "description": "Effect function",
+    "prefix": "fn",
+    "scope": "typescript,typescriptreact",
+    "body": [
+      "Effect.fn(function* ($1) {\n  $0\n})"
+    ]
+  },
+  "Effect Gen Function": {
+    "description": "Effect Generator function",
+    "prefix": "egg",
+    "scope": "typescript,typescriptreact",
+    "body": [
+      "Effect.gen(function* () {\n  $0\n})"
+    ]
+  },
+  "Effect Gen Function Promise": {
+    "prefix": "eggp",
+    "scope": "typescript,typescriptreact",
+    "body": [
+      "Effect.gen(function* () {",
+      "\t${0}${1:${TM_SELECTED_TEXT}}",
+      "}).pipe(",
+      "\tEffect.runPromise",
+      ")"
+    ]
+  },
+  "Effect Promise": {
+    "prefix": "ep",
+    "scope": "typescript,typescriptreact",
+    "body": [
+      "Effect.promise(async () => {",
+      "\t${0}${1:${TM_SELECTED_TEXT}}",
+      "})"
+    ]
+  },
+  "Pipe Effect.runPromise": {
+    "prefix": "erp",
+    "scope": "typescript,typescriptreact",
+    "body": [
+      "$0.pipe(Effect.runPromise)"
+    ]
+  },
+  "Yield-Star": {
+    "description": "yield*",
+    "prefix": "yy",
+    "scope": "typescript,typescriptreact",
+    "body": [
+      "yield* $0"
+    ]
+  },
+  "Yield Star (const)": {
+    "description": "yield* to const",
+    "prefix": "cyy",
+    "scope": "typescript,typescriptreact",
+    "body": [
+      "const $1 = yield* $0"
+    ]
+  },
+  "Effect Vitest-Describe": {
+    "description": "Template for @effect/vitest",
+    "prefix": "desc",
+    "scope": "typescript,typescriptreact",
+    "body": [
+      "describe(\"${1:DESC}\", () => {",
+      "\tit.effect(",
+      "\t\"${2:NAME}\",",
+      "\tEffect.fnUntraced(function*() {",
+      "\t\tconst x = yield* $0Effect.succeed(2);",
+      "",
+      "\t\tassert.equal(x, 2);",
+      "\t\texpect(x).toBe(2);",
+      "\t}),",
+      "\t);",
+      "});"
+    ]
+  },
+  "Effect Vitest-Template": {
+    "description": "Template for @effect/vitest",
+    "prefix": "tst",
+    "isFileTemplate": true,
+    "scope": "typescript,typescriptreact",
+    "body": [
+      "import * as it from \"@effect/vitest\";",
+      "import { assert, describe, expect } from \"@effect/vitest\";",
+      "import { Effect } from \"effect\";",
+      "",
+      "describe(\"${1:DESC}\", () => {",
+      "\tit.effect(",
+      "\t\"${2:NAME}\",",
+      "\tEffect.fnUntraced(function*() {",
+      "\t\tconst x = yield* $0Effect.succeed(2);",
+      "",
+      "\t\tassert.equal(x, 2);",
+      "\t\texpect(x).toBe(2);",
+      "\t}),",
+      "\t);",
+      "});"
+    ]
+  },
+  "Effect Bun runMain": {
+    "description": "Effect Bun runMain",
+    "prefix": "ebrun",
+    "isFileTemplate": true,
+    "scope": "typescript,typescriptreact",
+    "body": [
+      "import { Effect } from \"effect\";",
+      "import { BunRuntime } from \"@effect/platform-bun\";",
+      "",
+      "const program = Effect.log(\"Hello Bun Effect!\");",
+      "",
+      "if (import.meta.main) {",
+      "  BunRuntime.runMain(program, {",
+      "    disableErrorReporting: false,",
+      "    disablePrettyLogger: false,",
+      "  });",
+      "}"
+    ]
+  }
+}

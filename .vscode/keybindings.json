@@ -1,0 +1,9 @@
+// keybindings.json is not acitive in workspace .vscode
+// use the bindings below as inspiration an add them to your user keybindings.json
+[
+    {
+        "key": "ctrl+k ctrl+a",
+        "when": "editorFocus",
+        "command": "alternate.createAlternateFile"
+    }
+]

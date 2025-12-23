@@ -1,0 +1,12 @@
+{
+    "servers": {
+        "effect-docs": {
+            "type": "stdio",
+            "command": "sh",
+            "args": [
+                "-c",
+                "exec podman run -i --rm --pull newer docker.io/timsmart/effect-mcp"
+            ]
+        }
+    }
+}

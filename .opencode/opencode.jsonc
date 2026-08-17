@@ -199,6 +199,20 @@
         // "TAVILY_API_KEY": "optional for search tool"
       }
     },
+    "crw": { // https://github.com/us/crw
+      "enabled": false,
+      "type": "local",
+      "command": [
+        "sh",
+        "-c",
+        "exec bun x crw-mcp@latest"
+      ],
+      "environment": {
+        "CRW_CRAWLER__USER_AGENT": "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0",
+        // "CRW_CRAWLER__MAX_CONCURRENCY": "6",
+        // "CRW_RENDERER__LIGHTPANDA__WS_URL": "ws://127.0.0.1:9222"
+      }
+    },
     "searxng": { // https://github.com/dandehoon/searxng-mcp
       "enabled": false,
       "type": "local",

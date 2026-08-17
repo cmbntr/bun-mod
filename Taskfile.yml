@@ -12,7 +12,8 @@ vars:
   IMG_BASE_FROM: "registry.access.redhat.com/ubi10/ubi-minimal:latest"
   IMG_MUSL_BUILDER_FROM: "docker.io/oven/bun:alpine"
   IMG_MUSL_BASE_FROM: "docker.io/library/alpine:latest"
-  OPENSPEC_VERSION: "1.9.0"
+  OPENSPEC_VERSION: "1.11.0"
+  EFFECT_VERSION: "rc"
   ENTRY_TS: src/mod.ts
   APP_PORT: 3000
   ASSETS: "" #"--asset-naming='[name].[ext]' src/db/schema.sql"
@@ -56,6 +57,7 @@ tasks:
       NODE_ENV: "production"
       BUN_CONFIG_VERBOSE_FETCH: "false"
       OTEL_EFFECT: "true"
+      # OTEL_EFFECT_DUMP_CONFIG: "true"
       # OTEL_EXPORTER_OTLP_HEADERS: "authorization=e4c2331f-2622-444c-988a-f17324f02ba5"
       # OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318"
       # OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: "http://localhost:14318/v1/logs"
@@ -250,8 +252,9 @@ tasks:
     desc: "Adds effect-ts dependencies."
     dir: "{{.ROOT_DIR}}"
     cmds:
-      - bun add effect @effect/platform @effect/platform-bun
-      - bun add -D @effect/language-service @effect-patterns/ep-cli effect-solutions
+      - bun add effect@{{.EFFECT_VERSION}} @effect/platform-bun@{{.EFFECT_VERSION}}
+      - bun add -D @effect/tsgo
+      - bun add -D @effect-patterns/ep-cli effect-solutions
       - sed -i -e 's/\/\/[[:space:]]*PLUGIN-EFFECT-LS[[:space:]]*//' tsconfig.json
       - mkdir -p docs && bun x effect-solutions show $(bun x effect-solutions list | grep  '^[^ ]' | cut -f 1 -d ' ') > docs/effect-solutions.md
 
@@ -259,41 +262,42 @@ tasks:
     desc: "Adds effect-ts vitest dependencies."
     dir: "{{.ROOT_DIR}}"
     cmds:
-      - bun add -D vitest @effect/vitest
+      - bun add -D vitest @effect/vitest@{{.EFFECT_VERSION}}
       - sed -i -e 's/\/\/[[:space:]]*VITEST[[:space:]]*//' .vscode/settings.json
 
   deps:effect:telemetry:
     desc: "Adds effect-ts telemetry dependencies."
     dir: "{{.ROOT_DIR}}"
     cmds:
-      - bun add @effect/opentelemetry @effect/experimental
+      - bun add @effect/opentelemetry@{{.EFFECT_VERSION}} # @effect/experimental
       # Download telemetry.ts (https://gist.github.com/cmbntr/63d27156e8bb2b34f33441c62be73a33)
-      - curl -o 'src/telemetry.ts' 'https://gist.githubusercontent.com/cmbntr/63d27156e8bb2b34f33441c62be73a33/raw/6de84b8e92bdeeb33a7d3431434617b542dc1bcb/telemetry.ts'
-
-  deps:effect:telemetry:sdk:
-    desc: "Adds effect-ts telemetry dependencies (with JavaScript SDK)."
-    dir: "{{.ROOT_DIR}}"
-    cmds:
-      - bun add @effect/opentelemetry @effect/experimental @opentelemetry/exporter-trace-otlp-proto @opentelemetry/sdk-trace-base @opentelemetry/sdk-trace-node @opentelemetry/sdk-trace-web
+      - curl -o 'src/telemetry.ts' 'https://gist.githubusercontent.com/cmbntr/63d27156e8bb2b34f33441c62be73a33/raw/bd4259265b7d35fa761b52c2a1ff5d3fdcbb186e/telemetry.ts'
 
   deps:effect:sqlite:
     desc: "Adds effect-ts sqlite dependencies."
     dir: "{{.ROOT_DIR}}"
     cmds:
-      - bun add @effect/sql @effect/sql-sqlite-bun
+      - bun add @effect/sql-sqlite-bun@{{.EFFECT_VERSION}}
+
+  deps:effect:pglite:
+    desc: "Adds effect-ts pglite dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @effect/sql-pglite@{{.EFFECT_VERSION}}
 
   deps:effect:libsql:
     desc: "Adds effect-ts libsql dependencies."
     dir: "{{.ROOT_DIR}}"
     cmds:
-      - bun add @effect/sql @effect/sql-libsql
+      - bun add @effect/sql-libsql@{{.EFFECT_VERSION}}
 
-  deps:effect:drizzle:
-    desc: "Adds effect-ts drizzle dependencies."
-    dir: "{{.ROOT_DIR}}"
-    cmds:
-      - bun add @effect/sql @effect/sql-drizzle drizzle-orm
-      - bun add --dev drizzle-kit @libsql/client
+  # TODO https://orm.drizzle.team/docs/get-started/effect-postgresql-new#get-started-with-drizzle-and-effect-postgresql
+  # deps:effect:drizzle:
+  #   desc: "Adds effect-ts drizzle dependencies."
+  #   dir: "{{.ROOT_DIR}}"
+  #   cmds:
+  #     - bun add @effect/sql-drizzle@{{.EFFECT_VERSION}} drizzle-orm
+  #     - bun add --dev drizzle-kit @libsql/client
 
   deps:nats:
     desc: "Adds NATS dependencies. (https://github.com/nats-io/nats.js)"
@@ -312,7 +316,7 @@ tasks:
       - curl -L -o 'static/datastar.js' "https://cdn.jsdelivr.net/gh/starfederation/datastar@${DATASTAR_VERSION}/bundles/datastar.js"
       - curl -L -o 'static/datastar.js.map' "https://cdn.jsdelivr.net/gh/starfederation/datastar@${DATASTAR_VERSION}/bundles/datastar.js.map"
     env:
-      DATASTAR_VERSION: "1.0.2"
+      DATASTAR_VERSION: "1.0.3"
 
   deps:opentui:
     desc: "Adds opentui dependencies. (https://opentui.com/)"

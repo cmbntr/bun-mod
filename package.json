@@ -11,9 +11,9 @@
   "scripts": {
     "tsgo": "bun x --bun -p 'typescript@latest' tsc",
     "check": "bun x --bun tsc --noEmit",
-    "test": "bun x --bun vitest",
-    "test-update": "bun x --bun vitest --update",
-    "test-coverage": "bun x --bun vitest run --coverage",
+    "test": "bun x --bun vitest --exclude '.repos/**' --passWithNoTests",
+    "test-update": "bun x --bun vitest --exclude '.repos/**' --passWithNoTests --update",
+    "test-coverage": "bun x --bun vitest run --exclude '.repos/**' --passWithNoTests --coverage",
     "madge-circular": "bun x madge --extensions ts --circular --no-color --no-spinner --warning src",
     "madge-svg": "mkdir -p out && bun x madge --extensions ts --image out/deps.svg src",
     "madge-dot": "mkdir -p out && bun x madge --extensions ts --dot src > out/deps.dot",
@@ -31,7 +31,7 @@
     "@types/bun": "^1.3.13"
   },
   "optionalDependencies": {
-    "dprint": "^0.55.2"
+    "dprint": "^0.56.1"
   },
   "overrides": {
     "NO-OVERRIDE-msgpackr": "npm:noop3@1000.0.0",

@@ -10,9 +10,10 @@
     "moduleDetection": "force",
     "jsx": "react-jsx",
     // JSX-KITAJS "jsxImportSource": "@kitajs/html",
+    // JSX-OPENTUI "jsxImportSource": "@opentui/react",
     "types": [
       "bun",
-      // "react"
+      // REACT "react"
     ],
     "allowJs": true,
     // Bundler mode

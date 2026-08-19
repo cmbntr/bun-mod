@@ -220,6 +220,23 @@ tasks:
         vars:
           EXTRA_ARGS: "load --agent --compact"
 
+  shadcn:
+    vars:
+      SHADCN_VERSION: '{{.SHADCN_VERSION | default "latest"}}'
+      EXTRA_ARGS: '{{.EXTRA_ARGS | default (.CLI_ARGS | default "info")}}'
+    cmds:
+      - bun x --bun "shadcn@{{.SHADCN_VERSION}}" {{.EXTRA_ARGS}}
+    env:
+      DO_NOT_TRACK: "1"
+
+  shadcn:init:
+    vars:
+      EXTRA_ARGS: '{{.EXTRA_ARGS | default (.CLI_ARGS | default "info")}}'
+    cmds:
+      - task: shadcn
+        vars:
+          EXTRA_ARGS: "init --help"
+
   deps:fast-check:
     desc: "Adds fast-check dependencies. (https://fast-check.dev/)"
     dir: "{{.ROOT_DIR}}"
@@ -297,8 +314,33 @@ tasks:
     env:
       DATASTAR_VERSION: "1.0.2"
 
+  deps:opentui:
+    desc: "Adds opentui dependencies. (https://opentui.com/)"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @opentui/core @opentui/react react
+      # - bun add opentui-spinner
+      - bun add -D @types/react
+      - sed -i -e 's/\/\/[[:space:]]*REACT[[:space:]]*//' tsconfig.json
+      - sed -i -e 's/\/\/[[:space:]]*JSX-OPENTUI[[:space:]]*//' tsconfig.json
+
+  deps:opentui:tuiparts:
+    desc: "Adds opentui dependencies. (https://tuiparts.sh/)"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      TUIPARTS_SHADCN_VERSION: "4.13"
+    cmds:
+      - bun add @tuiparts/react
+      - task: shadcn
+        vars:
+          SHADCN_VERSION: "{{.TUIPARTS_SHADCN_VERSION}}"
+          EXTRA_ARGS: "add @tuiparts/react/{{.ITEM}}"
+        for:
+          - button
+          - checkbox
+
   deps:kitajs:
-    desc: "Adds kitajs dependencies."
+    desc: "Adds kitajs dependencies. (https://github.com/kitajs/html)"
     dir: "{{.ROOT_DIR}}"
     cmds:
       - bun add @kitajs/html

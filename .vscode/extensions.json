@@ -14,7 +14,9 @@
     "will-wow.vscode-alternate-file",
     "kamadorueda.alejandra",
     "tekumara.typos-vscode",
-    "planet57.vscode-beads",
     "varlock.env-spec-language"
+  ],
+  "unwantedRecommendations": [
+    "planet57.vscode-beads",
   ]
 }

@@ -28,14 +28,14 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@types/bun": "^1.3.13"
+    "@types/bun": "^1.4.2"
   },
   "optionalDependencies": {
-    "dprint": "^0.56.1"
+    "dprint": "^0.57.4"
   },
-  "overrides": {
-    "NO-OVERRIDE-msgpackr": "npm:noop3@1000.0.0",
-    "NO-OVERRIDE-@parcel/watcher": "npm:noop3@1000.0.0"
+  "x-disabled-overrides": {
+    "msgpackr": "npm:noop3@1000.0.0",
+    "@parcel/watcher": "npm:noop3@1000.0.0"
   },
   "bun-create": {
     "preinstall": ["echo 'Installing...'"],

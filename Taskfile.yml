@@ -12,8 +12,8 @@ vars:
   IMG_BASE_FROM: "registry.access.redhat.com/ubi10/ubi-minimal:latest"
   IMG_MUSL_BUILDER_FROM: "docker.io/oven/bun:alpine"
   IMG_MUSL_BASE_FROM: "docker.io/library/alpine:latest"
-  OPENSPEC_VERSION: "1.13.2"
-  EFFECT_VERSION: "rc"
+  OPENSPEC_VERSION: "1.14.0"
+  EFFECT_VERSION: "latest"
   ENTRY_TS: src/mod.ts
   APP_PORT: 3000
   ASSETS: "" #"--asset-naming='[name].[ext]' src/db/schema.sql"
@@ -271,7 +271,7 @@ tasks:
     cmds:
       - bun add @effect/opentelemetry@{{.EFFECT_VERSION}} # @effect/experimental
       # Download telemetry.ts (https://gist.github.com/cmbntr/63d27156e8bb2b34f33441c62be73a33)
-      - curl -o 'src/telemetry.ts' 'https://gist.githubusercontent.com/cmbntr/63d27156e8bb2b34f33441c62be73a33/raw/bd4259265b7d35fa761b52c2a1ff5d3fdcbb186e/telemetry.ts'
+      - curl -o 'src/telemetry.ts' 'https://gist.githubusercontent.com/cmbntr/63d27156e8bb2b34f33441c62be73a33/raw/5432a466718755788c48a9b8b7a067bef8dc3465/telemetry.ts'
 
   deps:effect:sqlite:
     desc: "Adds effect-ts sqlite dependencies."

@@ -1,0 +1,87 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+vars:
+  PROJ: "{{ .ROOT_DIR | base }}"
+  PROJ_TAG: "{{.PROJ}}"
+  WS_DIR: "{{.ROOT_DIR}}/jj-ws"
+  DEFAULT_REV: "develop"
+  RELEASE_REV: "main"
+
+tasks:
+  tasks:edit:
+    desc: "Edit ~/Taskfile.yml"
+    aliases:
+      - edit
+    cmds:
+      - nvim ~/Taskfile.yml
+
+  ws:list:
+    desc: List all active jj workspaces
+    aliases:
+      - default
+    silent: true
+    cmds:
+      - (jj workspace list --ignore-working-copy {{.CLI_ARGS}} ) | grep -vE '^default(:|$)' || true
+
+  ws:list:txt:
+    desc: List all active jj workspaces (plain text, names only)
+    cmds:
+      - task: ws:list
+        vars:
+          CLI_ARGS: |
+            -T 'name ++ "\n"'
+
+  ws:list:json:
+    desc: List all active jj workspaces (JSON)
+    cmds:
+      - task: ws:list
+        vars:
+          CLI_ARGS: |
+            -T 'json(self)' | jq --slurp  'map(select(.name != "default"))'
+
+  ws:add:
+    desc: Create a new jj workspace inside {{.WS_DIR}}
+    summary: |
+      Usage: task ws:add name=feature-x [rev={{.DEFAULT_REV}}]
+             task ws:add -- feature-x
+    silent: true
+    vars:
+      UUID:
+        sh: uuidgen --time-v7 2>/dev/null || uuidgen
+      REV: "{{default .DEFAULT_REV .rev}}"
+      NAME: "{{coalesce .name .CLI_ARGS .UUID}}"
+      DIR: "{{.WS_DIR}}/{{.NAME}}"
+    cmds:
+      - mkdir -p "{{.DIR}}" && jj workspace add "{{.DIR}}" -r {{.REV}}
+      - task: ws:list
+        vars:
+          CLI_ARGS: ""
+      - echo "Workspace '{{.NAME}}' created at {{.DIR}} tracking '{{.REV}}'"
+
+  ws:rm:
+    desc: Remove a jj workspace
+    summary: |
+      Usage: task ws:rm name=feature-x
+             task ws:rm -- feature-x
+    silent: true
+    vars:
+      NAME: "{{coalesce .name .CLI_ARGS}}"
+    cmds:
+      - |
+        if [ -z "{{.NAME}}" ]; then
+          echo "Error: Workspace name is required." >&2
+          exit 1
+        fi
+      - jj workspace forget "{{.NAME}}"
+      - rm -rf "{{.WS_DIR}}/{{.NAME}}"
+      - echo "Workspace '{{.NAME}}' removed"
+      - task: ws:list
+        vars:
+          CLI_ARGS: ""
+
+  ws:rm:all:
+    desc: "Remove all workspaces."
+    prompt: "DANGER! Remove all workspaces?"
+    cmds:
+      - task ws:list:txt | grep -v default | while read WS; do task ws:rm name=$WS ; done

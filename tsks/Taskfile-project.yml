@@ -1,0 +1,224 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  vscode:open:
+    desc: "Opens the VS Code workspace."
+    dir: "{{.ROOT_DIR}}"
+    aliases:
+      - c
+    cmds:
+      - code {{.PROJ}}.code-workspace
+
+  run:
+    desc: "Runs {{.ENTRY_TS}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run {{.CLI_ARGS | default .ENTRY_TS}}
+    env:
+      PORT: "{{.APP_PORT}}"
+      NODE_ENV: "production"
+      BUN_CONFIG_VERBOSE_FETCH: "false"
+
+  dev:
+    desc: "Runs {{.ENTRY_TS}} with --watch --no-clear-screen"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run --watch --no-clear-screen {{.CLI_ARGS | default .ENTRY_TS}}
+    env:
+      PORT: "{{.APP_PORT}}"
+      NODE_ENV: "production"
+      BUN_CONFIG_VERBOSE_FETCH: "false"
+
+  dev:trace:
+    desc: "Runs {{.ENTRY_TS}} with --watch --no-clear-screen"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run --watch --no-clear-screen {{.CLI_ARGS | default .ENTRY_TS}}
+    env:
+      PORT: "{{.APP_PORT}}"
+      NODE_ENV: "production"
+      BUN_CONFIG_VERBOSE_FETCH: "false"
+      OTEL_EFFECT: "true"
+      # OTEL_EFFECT_DUMP_CONFIG: "true"
+      # OTEL_EXPORTER_OTLP_HEADERS: "authorization=e4c2331f-2622-444c-988a-f17324f02ba5"
+      # OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318"
+      # OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: "http://localhost:14318/v1/logs"
+
+  update:
+    desc: "Updates dependencies"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun outdated
+      - bun update {{.CLI_ARGS}}
+
+  why:
+    desc: "Shows dependency trees"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun pm list --all
+      - bun pm why {{.CLI_ARGS | default "'*'" }}
+
+  fmt:
+    desc: "Formats the code"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun x dprint fmt {{.CLI_ARGS}}
+
+  fmt:update:force:
+    desc: "Updates the formatter plugins (clears the cache first)"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun x dprint clear-cache {{.CLI_ARGS}}
+      - task fmt:update
+
+  fmt:update:
+    desc: "Updates the formatter plugins"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun x dprint config add typescript
+      - bun x dprint config add g-plane/markup_fmt
+      - bun x dprint config add g-plane/malva
+      - bun x dprint config add json
+      - bun x dprint config add toml
+      - bun x dprint config add markdown
+      - bun x dprint config add dockerfile
+      - bun x dprint config add g-plane/pretty_yaml
+      # - bun x dprint config add ruff
+      # - bun x dprint config add sql
+      # - bun x dprint config add "https://github.com/mridang/dprint-go/releases/download/v1.4.0/shfmt.wasm"
+
+  fmt:nix:
+    desc: "Formats nix files"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - alejandra {{.CLI_ARGS | default "."}}
+
+  tsc:
+    desc: "Runs bun x tsc"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun x --bun tsc {{.CLI_ARGS}}
+
+  tsgo:
+    desc: "Runs bun x tsgo"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun x --bun -p "@typescript/native-preview${BUNX_VERSION-"@latest"}" tsgo {{.CLI_ARGS}}
+
+  check:
+    desc: "Runs bun run check"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run check {{.CLI_ARGS}}
+      - bun run madge-circular
+
+  docs:
+    desc: "Runs bun run docs"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run docs {{.CLI_ARGS}}
+
+  docs:md:
+    desc: "Runs bun run docs-md"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run docs-md {{.CLI_ARGS}}
+
+  docs:md:init:
+    desc: "Installs dependencies for docs-md"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add -D typedoc typedoc-plugin-markdown
+
+  test:
+    desc: "Runs bun run test"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run test {{.CLI_ARGS}}
+    env:
+      PORT: "{{.APP_PORT}}"
+      NODE_ENV: "production"
+
+  test:create:
+    desc: "Tests this repo with bun create"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      OUT: "/tmp/{{.PROJ}}-test-create/{{now | unixEpoch}}"
+    cmds:
+      - bun create {{.PROJ}} {{.OUT}} {{.CLI_ARGS}}
+    env:
+      BUN_CREATE_DIR: "{{.ROOT_DIR}}/.."
+
+  test:create:clean:
+    desc: "Cleans up the test create dirs"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - rm -rf /tmp/{{.PROJ}}-test-create
+
+  clean:
+    desc: "Cleans the project."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - echo cleaning...
+
+  clean:mrproper:
+    desc: "Cleans (mrproper) the project."
+    prompt: "Run mrproper?"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - rm -rf node_modules out || true
+      - rm -rf "{{.IMG_BUN_DIR}}" || true
+      - podman image rm {{.IMG_BUILDER}} {{.IMG_BASE}} {{.IMG}} || true
+      - podman image rm {{.IMG_BUILDER}}-musl {{.IMG_BASE}}-musl {{.IMG}}-musl || true
+      - podman volume rm {{.PROJ}} || true
+
+  lint:monorepo:
+    desc: "Runs monorepo linter (https://github.com/QuiiBz/sherif)"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      EXTRA_ARGS: "{{.EXTRA_ARGS | default .CLI_ARGS}}"
+    cmds:
+      - bun x "sherif${BUNX_VERSION-"@latest"}" {{.EXTRA_ARGS}}
+
+  varlock:
+    desc: "Runs varlock (https://varlock.dev/)"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      EXTRA_ARGS: '{{.EXTRA_ARGS | default (.CLI_ARGS | default "load")}}'
+    cmds:
+      - bun x --bun "varlock${BUNX_VERSION-"@latest"}" {{.EXTRA_ARGS}}
+    env:
+      VARLOCK_TELEMETRY_DISABLED: "1"
+
+  varlock:typegen:
+    desc: "Runs varlock typegen"
+    cmds:
+      - task: varlock
+        vars:
+          EXTRA_ARGS: "typegen"
+
+  varlock:lint:
+    desc: "Runs varlock linting"
+    cmds:
+      - task: varlock
+        vars:
+          EXTRA_ARGS: "load --agent --compact"
+
+  shadcn:
+    vars:
+      SHADCN_VERSION: '{{.SHADCN_VERSION | default "latest"}}'
+      EXTRA_ARGS: '{{.EXTRA_ARGS | default (.CLI_ARGS | default "info")}}'
+    cmds:
+      - bun x --bun "shadcn@{{.SHADCN_VERSION}}" {{.EXTRA_ARGS}}
+    env:
+      DO_NOT_TRACK: "1"
+
+  shadcn:init:
+    vars:
+      EXTRA_ARGS: '{{.EXTRA_ARGS | default (.CLI_ARGS | default "info")}}'
+    cmds:
+      - task: shadcn
+        vars:
+          EXTRA_ARGS: "init --help"
+

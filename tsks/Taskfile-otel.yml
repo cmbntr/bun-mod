@@ -1,0 +1,118 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  gonzo:
+    desc: "Runs Gonzo - The TUI for log analysis"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmd: nix run "nixpkgs#gonzo" -- --otlp-enabled --otlp-http-port=${GONZO_OTLP_HTTP_PORT-"4318"} {{.CLI_ARGS}}
+    env:
+      # GONZO_OTLP_HTTP_PORT: 14318
+      GONZO_LOG_BUFFER: "1000"
+      GONZO_MEMORY_SIZE: "10000"
+
+  gonzo:ai:
+    desc: "Runs Gonzo - The TUI for log analysis"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmd: nix run "nixpkgs#gonzo" -- --ai-model="gpt-5-mini" --otlp-enabled --otlp-http-port=${GONZO_OTLP_HTTP_PORT-"4318"} {{.CLI_ARGS}}
+    env:
+      OPENAI_API_KEY: "sk-none"
+      OPENAI_API_BASE: "http://aiproxy.unicorn-tegu.ts.net/v1"
+      # GONZO_OTLP_HTTP_PORT: 14318
+      GONZO_LOG_BUFFER: "1000"
+      GONZO_MEMORY_SIZE: "10000"
+
+  lgtm:
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmd: >
+      podman run --rm -it --name "{{.PROJ}}-lgtm"
+      -p 4317-4318:4317-4318 -p 4000:3000
+      --pull=${PULL:newer} docker.io/grafana/otel-lgtm
+      {{.CLI_ARGS}}
+
+  hyperdx:
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmd: >
+      podman run --rm -it --name "{{.PROJ}}-hyperdx"
+      -p 4317-4318:4317-4318 -p 8080:8080
+      -e IS_LOCAL_APP_MODE="${IS_LOCAL_APP_MODE}" -e USAGE_STATS_ENABLED=false
+      --pull=${PULL:newer} docker.io/hyperdx/hyperdx-all-in-one:latest
+      --entrypoint "/bin/bash" -c "source /etc/local/entry.base.sh"
+    env:
+      IS_LOCAL_APP_MODE: "REQUIRED_AUTH" # "DANGEROUSLY_is_local_app_mode💀"
+
+  jaeger:
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmd: >
+      podman run --rm -it --name "{{.PROJ}}-jaeger"
+      -p 4317-4318:4317-4318  -p 16686:16686
+      -e COLLECTOR_OTLP_ENABLED=true -e QUERY_BASE_PATH=/
+      --pull=${PULL:newer} docker.io/jaegertracing/jaeger:latest
+      {{.CLI_ARGS}}
+
+  jaeger:v1:
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmd: >
+      podman run --rm -it --name "{{.PROJ}}-jaeger"
+      -p 4317-4318:4317-4318  -p 16686:16686
+      -e COLLECTOR_OTLP_ENABLED=true -e QUERY_BASE_PATH=/
+      --pull=${PULL:newer} docker.io/jaegertracing/all-in-one:latest
+      {{.CLI_ARGS | default "--collector.otlp.http.cors.allowed-headers=* --collector.otlp.http.tls.enabled=false"}}
+
+  fluentbit:
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    vars:
+      LOG_DIR: "{{.ROOT_DIR}}/logs"
+      CONFIG_FILE: "{{.LOG_DIR}}/fluent-bit.conf"
+    cmds:
+      - |
+        mkdir -p {{.LOG_DIR}}
+        if [ ! -f {{.CONFIG_FILE}} ]; then
+          cat <<EOF > {{.CONFIG_FILE}}
+        [SERVICE]
+            Flush        1
+            Log_Level    info
+            HTTP_Server  On
+            HTTP_Listen  0.0.0.0
+            HTTP_Port    2020
+            Health_Check On
+
+        [INPUT]
+            Name         http
+            Listen       0.0.0.0
+            Port         8888
+
+        [INPUT]
+            Name         opentelemetry
+            Listen       0.0.0.0
+            Port         4318
+
+        [OUTPUT]
+            Name         stdout
+            Match        *
+            Format       json_lines
+
+        [OUTPUT]
+            Name         file
+            Match        *
+            Path         /logs
+            File         fluent-bit.log
+            Format       ltsv
+            Delimiter    \t
+            Label_Delimiter =
+        EOF
+        fi
+      - >
+        podman run --rm -it --name {{.PROJ}}-fluentbit --env-host=false --read-only --userns=keep-id -u "$(id -u):$(id -g)"
+        -v {{.CONFIG_FILE}}:/fluent-bit/etc/fluent-bit.conf:ro,z
+        -v {{.LOG_DIR}}:/logs:rw,z
+        -p 4318:4318 -p 8888:8888 -p 2020:2020
+        --pull=${PULL:newer} docker.io/fluent/fluent-bit:latest {{.CLI_ARGS}}
+

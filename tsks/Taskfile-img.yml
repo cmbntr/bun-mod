@@ -1,0 +1,139 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+vars:
+  IMG_BUILDER_FROM: "docker.io/oven/bun:debian"
+  IMG_BASE_FROM: "registry.access.redhat.com/ubi10/ubi-minimal:latest"
+  IMG_MUSL_BUILDER_FROM: "docker.io/oven/bun:alpine"
+  IMG_MUSL_BASE_FROM: "docker.io/library/alpine:latest"
+
+tasks:
+  init:
+    internal: true
+    cmds:
+      - mkdir -p "{{.IMG_BUN_DIR}}" || true
+      - echo "await Bun.write('{{.IMG_BUN_DIR}}/CACHEDIR.TAG',atob('U2lnbmF0dXJlOiA4YTQ3N2Y1OTdkMjhkMTcyNzg5ZjA2ODg2ODA2YmM1NQo='))" | bun run -
+
+  builder:
+    desc: "Builds {{.IMG_BUILDER}}"
+    dir: "{{.ROOT_DIR}}"
+    deps:
+      - img:init
+    cmds:
+      - touch extra-certs.pem
+      - >
+        if [ -z $SKIP_PULL ]; then
+          podman pull {{.IMG_BUILDER_FROM}}
+        else
+          echo "NO PULL"
+        fi
+      - podman build --volume {{.IMG_BUN_DIR}}:/root/.bun --ignorefile .dockerignore --build-arg BUILDER={{.IMG_BUILDER_FROM}} -t "{{.IMG_BUILDER}}" -f Dockerfile-builder .
+
+  base:
+    desc: "Builds {{.IMG_BASE}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - touch extra-certs.pem
+      - >
+        if [ -z $SKIP_PULL ]; then
+          podman pull {{.IMG_BASE_FROM}}
+        else
+          echo "NO PULL"
+        fi
+      - podman build --ignorefile .dockerignore --build-arg BASE={{.IMG_BASE_FROM}} -t "{{.IMG_BASE}}" -f Dockerfile-base {{.CLI_ARGS}} .
+
+  build:
+    desc: "Builds {{.IMG}} with {{.IMG_BUILDER}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman build --volume {{.IMG_BUN_DIR}}:/root/.bun --ignorefile .dockerignore --build-arg BASE={{.IMG_BASE}} --build-arg  BUILDER="{{.IMG_BUILDER}}" --build-arg PROJ="{{.PROJ}}" -t "{{.IMG}}" {{.CLI_ARGS}} .
+      # - podman inspect "{{.IMG}}"
+
+  TODO:
+    desc: "Builds {{.IMG}}"
+    cmds:
+      - task: img:builder
+      - task: img:base
+      - task: img:build
+
+  run:
+    desc: "Runs {{.IMG}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman volume create {{.PROJ}} || true
+      - >
+        podman run --name {{.PROJ}} --rm -it --user "${PODMAN_USER-'12345:0'}"
+        -e OTEL_EFFECT=false -e OTEL_EXPORTER_OTLP_ENDPOINT=http://host.containers.internal:4318
+        --http-proxy=false --env-host=false --env PORT={{.APP_PORT}} -p {{.APP_PORT}}:{{.APP_PORT}}
+        --env-file=.env.local
+        -v "{{.PROJ}}:/data"
+        "{{.IMG}}" {{.CLI_ARGS}}
+
+  enter:
+    desc: "Enters running {{.IMG}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman exec -it --user "${PODMAN_USER-'12345:0'}" {{.PROJ}} {{.CLI_ARGS | default "/bin/bash"}}
+
+  builder:musl:
+    desc: "Builds {{.IMG_BUILDER}}-musl"
+    dir: "{{.ROOT_DIR}}"
+    deps:
+      - img:init
+    cmds:
+      - touch extra-certs.pem
+      - >
+        if [ -z $SKIP_PULL ]; then
+          podman pull {{.IMG_MUSL_BUILDER_FROM}}
+        else
+          echo "NO PULL"
+        fi
+      - podman build --volume {{.IMG_BUN_DIR}}:/root/.bun --ignorefile .dockerignore --build-arg BUILDER={{.IMG_MUSL_BUILDER_FROM}} -t "{{.IMG_BUILDER}}-musl" -f Dockerfile-builder-musl .
+
+  base:musl:
+    desc: "Builds {{.IMG_BASE}}-musl"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - touch extra-certs.pem
+      - >
+        if [ -z $SKIP_PULL ]; then
+          podman pull {{.IMG_MUSL_BASE_FROM}}
+        else
+          echo "NO PULL"
+        fi
+      - podman build --ignorefile .dockerignore --build-arg BASE={{.IMG_MUSL_BASE_FROM}} -t "{{.IMG_BASE}}-musl" -f Dockerfile-base-musl {{.CLI_ARGS}} .
+
+  build:musl:
+    desc: "Builds {{.IMG}}-musl with {{.IMG_BUILDER}}-musl"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman build --volume {{.IMG_BUN_DIR}}:/root/.bun --ignorefile .dockerignore --build-arg BASE={{.IMG_BASE}}-musl --build-arg BUILDER="{{.IMG_BUILDER}}-musl" --build-arg PROJ="{{.PROJ}}" -t "{{.IMG}}-musl" -f Dockerfile-musl {{.CLI_ARGS}} .
+      # - podman inspect "{{.IMG}}-musl"
+
+  musl:
+    desc: "Builds {{.IMG}}-musl"
+    cmds:
+      - task: img:builder:musl
+      - task: img:base:musl
+      - task: img:build:musl
+
+  run:musl:
+    desc: "Runs {{.IMG}}-musl"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman volume create {{.PROJ}} || true
+      - >
+        podman run --name {{.PROJ}}-musl --rm -it --user "${PODMAN_USER-'12345:0'}"
+        -e OTEL_EFFECT=false -e OTEL_EXPORTER_OTLP_ENDPOINT=http://host.containers.internal:4318
+        --http-proxy=false --env-host=false --env PORT={{.APP_PORT}} -p {{.APP_PORT}}:{{.APP_PORT}}
+        --env-file=.env.local
+        -v "{{.PROJ}}:/data"
+        "{{.IMG}}-musl" {{.CLI_ARGS}}
+
+  enter:musl:
+    desc: "Enters running {{.IMG}}-musl"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman exec -it --user "${PODMAN_USER-'12345:0'}" {{.PROJ}}-musl {{.CLI_ARGS | default "/bin/sh"}}
+
+

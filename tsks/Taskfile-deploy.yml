@@ -1,0 +1,104 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  wrangler:
+    desc: "Runs the cloudflare wrangler CLI"
+    interactive: true
+    cmds:
+      - bun x --bun wrangler {{.CLI_ARGS}}
+
+  fly:app:
+    desc: "Create app and deploy to fly.io"
+    cmds:
+      - task: fly:app:login
+      - task: fly:app:launch
+      - task: fly:app:img:push:musl
+      - task: fly:app:deploy
+      - task: fly:app:status
+
+  fly:app:login:
+    desc: "Logs in to fly.io"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmds:
+      - flyctl auth whoami --json | jq -r .email || flyctl auth login {{.CLI_ARGS}}
+
+  fly:app:status:
+    desc: "Shows the status of the fly app"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - flyctl status --app "{{.PROJ}}" {{.CLI_ARGS}}
+      - flyctl tokens list
+      - flyctl ips list
+
+  fly:app:launch:
+    desc: "Creates a new fly app"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmds:
+      - flyctl launch --yaml --name "{{.PROJ}}" --region fra --vm-cpu-kind shared --vm-cpus 1 --vm-memory 256 --internal-port {{.APP_PORT}} --image "registry.fly.io/{{.PROJ}}:latest" --no-github-workflow --no-deploy {{.CLI_ARGS}}
+
+  fly:app:img:push:musl:
+    desc: "Pushes the {{.IMG}}-musl image to registry.fly.io"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      FLY_DEPLOY_TOKEN:
+        sh: flyctl tokens create deploy --app "{{.PROJ}}" --expiry 180s
+    cmds:
+      - skopeo copy {{.CLI_ARGS}} --dest-creds x:"{{.FLY_DEPLOY_TOKEN}}" "containers-storage:{{.IMG}}-musl" docker://registry.fly.io/{{.PROJ}}:latest
+      - skopeo inspect --creds x:"{{.FLY_DEPLOY_TOKEN}}" docker://registry.fly.io/{{.PROJ}}:latest
+      - flyctl image show --json
+
+  fly:app:deploy:
+    desc: "Deploys the fly app"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - flyctl deploy --app "{{.PROJ}}" --flycast --max-concurrent 1 --ha=false --strategy immediate --image "registry.fly.io/{{.PROJ}}:latest" {{.CLI_ARGS}}
+
+  fly:app:expose:
+    desc: "Exposes the fly app to the public internet"
+    dir: "{{.ROOT_DIR}}"
+    prompt: "Expose fly app {{.PROJ}} to the public internet ?"
+    cmds:
+      - flyctl ips allocate-v6
+      - flyctl ips allocate-v6 --region fra
+      - flyctl ips allocate-v4 --shared
+      - flyctl ips list
+
+  fly:app:machine:restart:
+    desc: "Restarts the fly app machine"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      FLY_MACHINE_ID:
+        sh: flyctl status --app "{{.PROJ}}" --json | jq '.Machines[0].id'
+    cmds:
+      - flyctl machine restart {{.CLI_ARGS}} "{{.FLY_MACHINE_ID}}"
+
+  fly:app:machine:oha:
+    desc: "Runs oha against the fly app machine"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      FLY_PRIVATE_IP:
+        sh: flyctl status --app "{{.PROJ}}" --json | jq '.Machines[0].private_ip'
+    interactive: true
+    cmds:
+      - oha {{.CLI_ARGS}} "http://[{{.FLY_PRIVATE_IP}}]:{{.APP_PORT}}/healtz"
+
+  fly:app:oha:
+    desc: "Runs oha against the fly app"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      FLY_HOSTNAME:
+        sh: flyctl status --app "{{.PROJ}}" --json | jq -r '.Hostname'
+    interactive: true
+    cmds:
+      - oha {{.CLI_ARGS}} "https://{{.FLY_HOSTNAME}}/healtz"
+
+  fly:app:destroy:
+    desc: "Destroys the fly app"
+    dir: "{{.ROOT_DIR}}"
+    prompt: "Destroy fly app {{.PROJ}} ?"
+    cmds:
+      - flyctl apps destroy {{.CLI_ARGS}} "{{.PROJ}}"
+

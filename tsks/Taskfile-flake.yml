@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  update:
+    desc: "Updates flake.lock"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - nix flake update --refresh {{.CLI_ARGS}}
+
+  check:
+    desc: "Check flake.lock"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - nix-shell -p flake-checker --command "flake-checker {{.CLI_ARGS}}"
+

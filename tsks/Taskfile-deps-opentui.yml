@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  TODO:
+    desc: "Adds opentui dependencies. (https://opentui.com/)"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @opentui/core @opentui/react react
+      # - bun add opentui-spinner
+      - bun add -D @types/react
+      - sed -i -e 's/\/\/[[:space:]]*REACT[[:space:]]*//' tsconfig.json
+      - sed -i -e 's/\/\/[[:space:]]*JSX-OPENTUI[[:space:]]*//' tsconfig.json
+
+  tuiparts:
+    desc: "Adds opentui dependencies. (https://tuiparts.sh/)"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      TUIPARTS_SHADCN_VERSION: "4.13"
+    cmds:
+      - bun add @tuiparts/react
+      - task: shadcn:TODO
+        vars:
+          SHADCN_VERSION: "{{.TUIPARTS_SHADCN_VERSION}}"
+          EXTRA_ARGS: "add @tuiparts/react/{{.ITEM}}"
+        for:
+          - button
+          - checkbox
+

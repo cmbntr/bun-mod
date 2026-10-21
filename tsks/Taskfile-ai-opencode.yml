@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  TODO:
+    desc: "Start OpenCode (https://opencode.ai/)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    aliases:
+      - "::oco"
+    vars:
+      EXTRA_ARGS: "{{.EXTRA_ARGS | default .CLI_ARGS}}"
+    env:
+      OPENAI_API_KEY: "sk-none"
+      OPENAI_BASE_URL: "http://aiproxy.unicorn-tegu.ts.net/v1"
+      OPENCODE_CONFIG_DIR: "{{.ROOT_DIR}}/.opencode"
+      OPENCODE_DISABLE_CLAUDE_CODE: "true"
+      OPENCODE_DISABLE_LSP_DOWNLOAD: "true"
+      OPENCODE_ENABLE_QUESTION_TOOL: "true"
+      OPENCODE_EXPERIMENTAL_WORKSPACES: "false"
+      OPENCODE_EXPERIMENTAL_LSP_TOOL: "true"
+      OPENCODE_EXPERIMENTAL_SCOUT: "false"
+      RTK_TELEMETRY_DISABLED: "1"
+      OTEL_SERVICE_NAME: "opencode"
+      OTEL_TRACES_EXPORTER: "otlp"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318"
+    cmds:
+      - touch AGENTS.md
+      - nix-shell --option tarball-ttl "${NIX_TTL:-86400}" --impure -p typescript-language-server -p bun --command "bun x --bun \"opencode-ai${BUNX_VERSION-"@latest"}\" {{.EXTRA_ARGS}}"
+      # - bun x --bun \"opencode-ai${BUNX_VERSION-"@latest"}\" {{.CLI_ARGS}}
+
+  models:
+    desc: "List OpenCode models"
+    cmds:
+      - task: ai:opencode:TODO
+        vars:
+          EXTRA_ARGS: "models"
+
+  agents:
+    desc: "List OpenCode agents"
+    cmds:
+      - task: ai:opencode:TODO
+        vars:
+          EXTRA_ARGS: "agent list"
+

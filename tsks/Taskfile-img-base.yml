@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+vars:
+  IMG_BASE_FROM: "registry.access.redhat.com/ubi10/ubi-minimal:latest"
+  IMG_MUSL_BASE_FROM: "docker.io/library/alpine:latest"
+
+tasks:
+  TODO:
+    desc: "Builds {{.IMG_BASE}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - touch extra-certs.pem
+      - >
+        if [ -z $SKIP_PULL ]; then
+          podman pull {{.IMG_BASE_FROM}}
+        else
+          echo "NO PULL"
+        fi
+      - podman build --ignorefile .dockerignore --build-arg BASE={{.IMG_BASE_FROM}} -t "{{.IMG_BASE}}" -f Dockerfile-base {{.CLI_ARGS}} .
+
+  musl:
+    desc: "Builds {{.IMG_BASE}}-musl"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - touch extra-certs.pem
+      - >
+        if [ -z $SKIP_PULL ]; then
+          podman pull {{.IMG_MUSL_BASE_FROM}}
+        else
+          echo "NO PULL"
+        fi
+      - podman build --ignorefile .dockerignore --build-arg BASE={{.IMG_MUSL_BASE_FROM}} -t "{{.IMG_BASE}}-musl" -f Dockerfile-base-musl {{.CLI_ARGS}} .
+

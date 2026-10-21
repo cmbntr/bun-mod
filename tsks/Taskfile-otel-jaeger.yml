@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  TODO:
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmd: >
+      podman run --rm -it --name "{{.PROJ}}-jaeger"
+      -p 4317-4318:4317-4318  -p 16686:16686
+      -e COLLECTOR_OTLP_ENABLED=true -e QUERY_BASE_PATH=/
+      --pull=${PULL:newer} docker.io/jaegertracing/jaeger:latest
+      {{.CLI_ARGS}}
+
+  v1:
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmd: >
+      podman run --rm -it --name "{{.PROJ}}-jaeger"
+      -p 4317-4318:4317-4318  -p 16686:16686
+      -e COLLECTOR_OTLP_ENABLED=true -e QUERY_BASE_PATH=/
+      --pull=${PULL:newer} docker.io/jaegertracing/all-in-one:latest
+      {{.CLI_ARGS | default "--collector.otlp.http.cors.allowed-headers=* --collector.otlp.http.tls.enabled=false"}}
+

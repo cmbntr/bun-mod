@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  TODO:
+    desc: "Enters running {{.IMG}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman exec -it --user "${PODMAN_USER-'12345:0'}" {{.PROJ}} {{.CLI_ARGS | default "/bin/bash"}}
+
+  musl:
+    desc: "Enters running {{.IMG}}-musl"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman exec -it --user "${PODMAN_USER-'12345:0'}" {{.PROJ}}-musl {{.CLI_ARGS | default "/bin/sh"}}
+
+

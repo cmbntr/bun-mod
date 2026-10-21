@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+vars:
+  IMG_BUILDER_FROM: "docker.io/oven/bun:debian"
+  IMG_MUSL_BUILDER_FROM: "docker.io/oven/bun:alpine"
+
+tasks:
+  TODO:
+    desc: "Builds {{.IMG_BUILDER}}"
+    dir: "{{.ROOT_DIR}}"
+    deps:
+      - img:init
+    cmds:
+      - touch extra-certs.pem
+      - >
+        if [ -z $SKIP_PULL ]; then
+          podman pull {{.IMG_BUILDER_FROM}}
+        else
+          echo "NO PULL"
+        fi
+      - podman build --volume {{.IMG_BUN_DIR}}:/root/.bun --ignorefile .dockerignore --build-arg BUILDER={{.IMG_BUILDER_FROM}} -t "{{.IMG_BUILDER}}" -f Dockerfile-builder .
+
+  musl:
+    desc: "Builds {{.IMG_BUILDER}}-musl"
+    dir: "{{.ROOT_DIR}}"
+    deps:
+      - img:init
+    cmds:
+      - touch extra-certs.pem
+      - >
+        if [ -z $SKIP_PULL ]; then
+          podman pull {{.IMG_MUSL_BUILDER_FROM}}
+        else
+          echo "NO PULL"
+        fi
+      - podman build --volume {{.IMG_BUN_DIR}}:/root/.bun --ignorefile .dockerignore --build-arg BUILDER={{.IMG_MUSL_BUILDER_FROM}} -t "{{.IMG_BUILDER}}-musl" -f Dockerfile-builder-musl .
+

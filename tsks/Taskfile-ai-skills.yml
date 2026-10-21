@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  TODO:
+    desc: "Start skills cli (https://github.com/vercel-labs/skills)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    vars:
+      EXTRA_ARGS: '{{.EXTRA_ARGS | default (.CLI_ARGS | default "list")}}'
+    env:
+      OPENCODE_CONFIG_DIR: "{{.ROOT_DIR}}/.opencode"
+    cmds:
+      - nix-shell --option tarball-ttl "${NIX_TTL:-86400}" --impure -p typescript-language-server -p bun --command "bun x --bun \"skills${BUNX_VERSION-"@latest"}\" {{.EXTRA_ARGS}}"
+
+  update:
+    desc: "Updates installed skills"
+    cmds:
+      - task: ai:skills:TODO
+        vars:
+          EXTRA_ARGS: 'update {{.CLI_ARGS | default "--yes --project"}}'
+
+  add:
+    desc: "Adds skills"
+    vars:
+      ADD_AGENTS: "--agent opencode" # --agent pi"
+      EXTRA_ADD_ARGS: "{{.EXTRA_ADD_ARGS | default .CLI_ARGS}}"
+    cmds:
+      - task: ai:skills:TODO
+        vars:
+          EXTRA_ARGS: "add {{.ADD_AGENTS}} --yes {{.EXTRA_ADD_ARGS}}"
+
+  add:cmbntr:
+    desc: "Installs cmbntr skills (https://github.com/cmbntr/skills)"
+    cmds:
+      - task: ai:skills:add
+        vars:
+          EXTRA_ADD_ARGS: "cmbntr/skills {{.CLI_ARGS}}"
+
+  add:mattpocock:
+    desc: "Installs Matt Pocock skills (https://github.com/mattpocock/skills)"
+    cmds:
+      - task: ai:skills:add
+        vars:
+          EXTRA_ADD_ARGS: "mattpocock/skills {{.CLI_ARGS}}"
+
+  add:effect:
+    desc: "Installs Effect-TS skills (https://github.com/Effect-TS/skills)"
+    # TODO https://github.com/lucas-barake/dotfiles/tree/main/ai
+    cmds:
+      - task: ai:skills:add
+        vars:
+          EXTRA_ADD_ARGS: "Effect-TS/skills {{.CLI_ARGS}}"
+
+  add:modern-web-guidance:
+    desc: "Installs Google Modern Web Guidance skills (https://developer.chrome.com/docs/modern-web-guidance)"
+    cmds:
+      - task: ai:skills:add
+        vars:
+          EXTRA_ADD_ARGS: "GoogleChrome/modern-web-guidance {{.CLI_ARGS}}"
+
+  add:skill-creator:
+    desc: "Installs skill-creator skill (https://github.com/anthropics/skills)"
+    cmds:
+      - task: ai:skills:add
+        vars:
+          EXTRA_ADD_ARGS: "anthropics/skills --skill skill-creator {{.CLI_ARGS}}"
+

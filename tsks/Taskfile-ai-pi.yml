@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  TODO:
+    desc: "Start pi (https://pi.dev/)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    aliases:
+      - "::pi"
+    vars:
+      EXTRA_ARGS: "{{.EXTRA_ARGS | default .CLI_ARGS}}"
+    env:
+      PI_CODING_AGENT_DIR: "{{.ROOT_DIR}}/.pi/home"
+      PI_CODING_AGENT_SESSION_DIR: "{{.ROOT_DIR}}/.pi/sessions"
+      PI_OFFLINE: "1"
+      PI_TELEMETRY: "0"
+      PI_SKIP_VERSION_CHECK: "1"
+      RTK_TELEMETRY_DISABLED: "1"
+      OTEL_SERVICE_NAME: "opencode"
+      OTEL_TRACES_EXPORTER: "otlp"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318"
+    cmds:
+      - touch AGENTS.md
+      - nix-shell --option tarball-ttl "${NIX_TTL:-86400}" --impure -p typescript-language-server -p bun --command "bun x --bun \"@earendil-works/pi-coding-agent${BUNX_VERSION-"@latest"}\" {{.EXTRA_ARGS}}"
+
+  models:
+    desc: "List pi models"
+    cmds:
+      - task: ai:pi:TODO
+        vars:
+          EXTRA_ARGS: "--list-models"
+

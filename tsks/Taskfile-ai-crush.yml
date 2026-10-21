@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  TODO:
+    desc: "Start Crush (https://github.com/charmbracelet/crush)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    env:
+      # OPENAI_API_KEY: "sk-none"
+      # OPENAI_BASE_URL: "http://aiproxy.unicorn-tegu.ts.net/v1"
+      NIXPKGS_ALLOW_UNFREE: "1"
+      CRUSH_REDUCE_ANIMATIONS: "true"
+    cmds:
+      - touch AGENTS.md
+      - nix-shell --impure -p typescript-language-server -p crush --command "crush {{.CLI_ARGS}}"
+
+  log:
+    dir: "{{.ROOT_DIR}}/.crush/logs"
+    interactive: true
+    cmds:
+      - nix-shell --impure -p crush --command "crush logs {{.CLI_ARGS | default "--follow"}}"
+      # - nix-shell -p lnav --command "lnav {{.CLI_ARGS | default "."}}"
+

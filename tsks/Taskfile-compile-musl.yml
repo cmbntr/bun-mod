@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  TODO:
+    desc: "Compiles {{.ENTRY_TS}} for MUSL {{ARCH}}"
+    vars:
+      TGT: '{{if eq ARCH "arm64"}}bun-linux-arm64-musl{{else}}bun-linux-x64-musl-modern{{end}}'
+    cmds:
+      - bun install --frozen-lockfile --omit=optional {{.CLI_ARGS}}
+      - bun build --minify-syntax --minify-whitespace --sourcemap --compile --target={{.TGT}} --outfile=out/{{.PROJ}} {{.ENTRY_TS}} {{.ASSETS}}
+      - chmod 755 out/{{.PROJ}}
+      # - upx -9 out/{{.PROJ}} # https://github.com/oven-sh/bun/issues/10051
+      # - mkdir -p out/node_modules/@libsql/ && cp-a node_modules/@libsql/linux-*-musl out/node_modules/@libsql/
+
+  init:
+    desc: "Prepares the compiler for MUSL {{ARCH}}"
+    vars:
+      TGT: '{{if eq ARCH "arm64"}}bun-linux-arm64-musl{{else}}bun-linux-x64-musl-modern{{end}}'
+    cmds:
+      - touch empty.ts
+      - bun build empty.ts --minify-syntax --minify-whitespace --sourcemap --compile --target={{.TGT}} --outfile=out/empty
+      - rm empty.ts out/empty
+

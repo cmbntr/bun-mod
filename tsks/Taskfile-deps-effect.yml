@@ -1,0 +1,58 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+vars:
+  EFFECT_VERSION: "latest"
+
+tasks:
+  TODO:
+    desc: "Adds effect-ts dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add effect@{{.EFFECT_VERSION}} @effect/platform-bun@{{.EFFECT_VERSION}}
+      - bun add -D @effect/tsgo
+      - bun add -D @effect-patterns/ep-cli effect-solutions
+      - sed -i -e 's/\/\/[[:space:]]*PLUGIN-EFFECT-LS[[:space:]]*//' tsconfig.json
+      - mkdir -p docs && bun x effect-solutions show $(bun x effect-solutions list | grep  '^[^ ]' | cut -f 1 -d ' ') > docs/effect-solutions.md
+
+  vitest:
+    desc: "Adds effect-ts vitest dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add -D vitest @effect/vitest@{{.EFFECT_VERSION}}
+      - sed -i -e 's/\/\/[[:space:]]*VITEST[[:space:]]*//' .vscode/settings.json
+
+  telemetry:
+    desc: "Adds effect-ts telemetry dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @effect/opentelemetry@{{.EFFECT_VERSION}} # @effect/experimental
+      # Download telemetry.ts (https://gist.github.com/cmbntr/63d27156e8bb2b34f33441c62be73a33)
+      - curl -o 'src/telemetry.ts' 'https://gist.githubusercontent.com/cmbntr/63d27156e8bb2b34f33441c62be73a33/raw/5432a466718755788c48a9b8b7a067bef8dc3465/telemetry.ts'
+
+  sqlite:
+    desc: "Adds effect-ts sqlite dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @effect/sql-sqlite-bun@{{.EFFECT_VERSION}}
+
+  pglite:
+    desc: "Adds effect-ts pglite dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @effect/sql-pglite@{{.EFFECT_VERSION}}
+
+  libsql:
+    desc: "Adds effect-ts libsql dependencies."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @effect/sql-libsql@{{.EFFECT_VERSION}}
+
+  # TODO https://orm.drizzle.team/docs/get-started/effect-postgresql-new#get-started-with-drizzle-and-effect-postgresql
+  # deps:effect:drizzle:
+  #   desc: "Adds effect-ts drizzle dependencies."
+  #   dir: "{{.ROOT_DIR}}"
+  #   cmds:
+  #     - bun add @effect/sql-drizzle@{{.EFFECT_VERSION}} drizzle-orm
+  #     - bun add --dev drizzle-kit @libsql/client
+

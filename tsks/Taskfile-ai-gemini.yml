@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  cli:
+    desc: "Start Gemini CLI (https://github.com/google-gemini/gemini-cli"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    env:
+      GEMINI_SANDBOX: "false" # podman
+    # NO_COLOR: "true"
+    cmds:
+      - touch AGENTS.md
+      - bun x --bun -p @google/gemini-cli@latest gemini {{.CLI_ARGS}}
+
+  ext:conductor:
+    cmds:
+      - bun x --bun -p @google/gemini-cli@latest gemini extensions install https://github.com/gemini-cli-extensions/conductor {{.CLI_ARGS | default "--auto-update"}}
+

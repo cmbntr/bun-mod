@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  img:
+    desc: "Inspects {{.IMG}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - skopeo inspect {{.CLI_ARGS}} "containers-storage:{{.IMG}}"
+
+  img:musl:
+    desc: "Inspects {{.IMG}}-musl"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - skopeo inspect {{.CLI_ARGS}} "containers-storage:{{.IMG}}-musl"

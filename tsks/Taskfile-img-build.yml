@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  TODO:
+    desc: "Builds {{.IMG}} with {{.IMG_BUILDER}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman build --volume {{.IMG_BUN_DIR}}:/root/.bun --ignorefile .dockerignore --build-arg BASE={{.IMG_BASE}} --build-arg  BUILDER="{{.IMG_BUILDER}}" --build-arg PROJ="{{.PROJ}}" -t "{{.IMG}}" {{.CLI_ARGS}} .
+      # - podman inspect "{{.IMG}}"
+
+  musl:
+    desc: "Builds {{.IMG}}-musl with {{.IMG_BUILDER}}-musl"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman build --volume {{.IMG_BUN_DIR}}:/root/.bun --ignorefile .dockerignore --build-arg BASE={{.IMG_BASE}}-musl --build-arg BUILDER="{{.IMG_BUILDER}}-musl" --build-arg PROJ="{{.PROJ}}" -t "{{.IMG}}-musl" -f Dockerfile-musl {{.CLI_ARGS}} .
+      # - podman inspect "{{.IMG}}-musl"
+

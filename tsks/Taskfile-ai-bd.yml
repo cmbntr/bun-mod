@@ -1,0 +1,58 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+vars:
+  PROJ_TAG: "{{.PROJ}}"
+
+tasks:
+  TODO:
+    desc: "Start beads (https://github.com/steveyegge/beads)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmds:
+      - task: ai:nrgho
+        vars: {
+          APPKEY: "beads",
+          REPO: "steveyegge/beads",
+          ARGS: "{{.CLI_ARGS | default \"human\"}}",
+        }
+
+  form:
+    desc: "Start beads create-form (https://github.com/steveyegge/beads)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmds:
+      - task: ai:nrgho
+        vars: { APPKEY: "beads", REPO: "steveyegge/beads", ARGS: "create-form {{.CLI_ARGS}}" }
+
+  killdaemons:
+    desc: "Start beads (https://github.com/steveyegge/beads)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmds:
+      - task: ai:nrgho
+        vars: { APPKEY: "beads", REPO: "steveyegge/beads", ARGS: "daemon list" }
+      - task: ai:nrgho
+        vars: { APPKEY: "beads", REPO: "steveyegge/beads", ARGS: "daemon killall {{.CLI_ARGS}}" }
+
+  init:
+    desc: "Init beads (https://github.com/steveyegge/beads)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmds:
+      - task: ai:nrgho
+        vars: {
+          APPKEY: "beads",
+          REPO: "steveyegge/beads",
+          ARGS: "init --prefix {{.PROJ_TAG | lower}} {{.CLI_ARGS}}",
+        }
+
+  web:
+    desc: "Start beads WEB (https://github.com/mantoni/beads-ui)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    env:
+      PORT: "6767"
+    cmds:
+      - nix-shell -p beads -p bun --command "bd daemon --health && bun x --bun -p beads-ui bdui {{.CLI_ARGS | default "start --open"}}"
+

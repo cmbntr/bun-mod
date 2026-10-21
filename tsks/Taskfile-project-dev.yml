@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  TODO:
+    desc: "Runs {{.ENTRY_TS}} with --watch --no-clear-screen"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run --watch --no-clear-screen {{.CLI_ARGS | default .ENTRY_TS}}
+    env:
+      PORT: "{{.APP_PORT}}"
+      NODE_ENV: "production"
+      BUN_CONFIG_VERBOSE_FETCH: "false"
+
+  trace:
+    desc: "Runs {{.ENTRY_TS}} with --watch --no-clear-screen"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run --watch --no-clear-screen {{.CLI_ARGS | default .ENTRY_TS}}
+    env:
+      PORT: "{{.APP_PORT}}"
+      NODE_ENV: "production"
+      BUN_CONFIG_VERBOSE_FETCH: "false"
+      OTEL_EFFECT: "true"
+      # OTEL_EFFECT_DUMP_CONFIG: "true"
+      # OTEL_EXPORTER_OTLP_HEADERS: "authorization=e4c2331f-2622-444c-988a-f17324f02ba5"
+      # OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318"
+      # OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: "http://localhost:14318/v1/logs"
+

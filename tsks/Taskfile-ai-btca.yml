@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  TODO:
+    desc: "Start btca (https://btca.dev/)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    env:
+      OPENAI_API_KEY: "sk-none"
+      OPENAI_BASE_URL: "http://aiproxy.unicorn-tegu.ts.net/v1"
+      OPENCODE_CONFIG_DIR: "{{.ROOT_DIR}}/.opencode"
+      OPENCODE_DISABLE_LSP_DOWNLOAD: "true"
+    cmds:
+      - nix-shell --impure -p typescript-language-server -p opencode -p bun --command "bun x --bun -p btca btca {{.CLI_ARGS}}"
+
+  config:
+    desc: "Start btca (https://btca.dev/)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    env:
+      OPENAI_API_KEY: "sk-none"
+      OPENAI_BASE_URL: "http://aiproxy.unicorn-tegu.ts.net/v1"
+      OPENCODE_CONFIG_DIR: "{{.ROOT_DIR}}/.opencode"
+      OPENCODE_DISABLE_LSP_DOWNLOAD: "true"
+    cmds:
+      - nix-shell --impure -p typescript-language-server -p opencode -p bun --command "bun x --bun -p btca btca config model -p openai -m gpt-5.2"
+      - nix-shell --impure -p typescript-language-server -p opencode -p bun --command "bun x --bun -p btca btca config repos add -n effect -u https://github.com/Effect-TS/effect -b main"
+

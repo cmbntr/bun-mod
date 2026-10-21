@@ -1,29 +1,13 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 version: "3"
 
-tasks:
+includes:
   gonzo:
-    desc: "Runs Gonzo - The TUI for log analysis"
-    dir: "{{.ROOT_DIR}}"
-    interactive: true
-    cmd: nix run "nixpkgs#gonzo" -- --otlp-enabled --otlp-http-port=${GONZO_OTLP_HTTP_PORT-"4318"} {{.CLI_ARGS}}
-    env:
-      # GONZO_OTLP_HTTP_PORT: 14318
-      GONZO_LOG_BUFFER: "1000"
-      GONZO_MEMORY_SIZE: "10000"
+    taskfile: ./Taskfile-otel-gonzo.yml
+  jaeger:
+    taskfile: ./Taskfile-otel-jaeger.yml
 
-  gonzo:ai:
-    desc: "Runs Gonzo - The TUI for log analysis"
-    dir: "{{.ROOT_DIR}}"
-    interactive: true
-    cmd: nix run "nixpkgs#gonzo" -- --ai-model="gpt-5-mini" --otlp-enabled --otlp-http-port=${GONZO_OTLP_HTTP_PORT-"4318"} {{.CLI_ARGS}}
-    env:
-      OPENAI_API_KEY: "sk-none"
-      OPENAI_API_BASE: "http://aiproxy.unicorn-tegu.ts.net/v1"
-      # GONZO_OTLP_HTTP_PORT: 14318
-      GONZO_LOG_BUFFER: "1000"
-      GONZO_MEMORY_SIZE: "10000"
-
+tasks:
   lgtm:
     dir: "{{.ROOT_DIR}}"
     interactive: true
@@ -44,26 +28,6 @@ tasks:
       --entrypoint "/bin/bash" -c "source /etc/local/entry.base.sh"
     env:
       IS_LOCAL_APP_MODE: "REQUIRED_AUTH" # "DANGEROUSLY_is_local_app_mode💀"
-
-  jaeger:
-    dir: "{{.ROOT_DIR}}"
-    interactive: true
-    cmd: >
-      podman run --rm -it --name "{{.PROJ}}-jaeger"
-      -p 4317-4318:4317-4318  -p 16686:16686
-      -e COLLECTOR_OTLP_ENABLED=true -e QUERY_BASE_PATH=/
-      --pull=${PULL:newer} docker.io/jaegertracing/jaeger:latest
-      {{.CLI_ARGS}}
-
-  jaeger:v1:
-    dir: "{{.ROOT_DIR}}"
-    interactive: true
-    cmd: >
-      podman run --rm -it --name "{{.PROJ}}-jaeger"
-      -p 4317-4318:4317-4318  -p 16686:16686
-      -e COLLECTOR_OTLP_ENABLED=true -e QUERY_BASE_PATH=/
-      --pull=${PULL:newer} docker.io/jaegertracing/all-in-one:latest
-      {{.CLI_ARGS | default "--collector.otlp.http.cors.allowed-headers=* --collector.otlp.http.tls.enabled=false"}}
 
   fluentbit:
     dir: "{{.ROOT_DIR}}"

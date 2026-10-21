@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  mcporter:
+    desc: "Start MCPorter (https://github.com/openclaw/mcporter)"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun x mcporter {{.CLI_ARGS}}
+    env:
+      MCPORTER_CONFIG: ".mcporter.json"
+      MCPORTER_STDIO_TRACE: "0"
+      #MCPORTER_LOG_LEVEL: "debug"
+
+  inspector:
+    desc: "Start MCP inspector (https://github.com/modelcontextprotocol/inspector)"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun x @modelcontextprotocol/inspector {{.CLI_ARGS}}
+

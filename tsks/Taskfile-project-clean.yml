@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  TODO:
+    desc: "Cleans the project."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - echo cleaning...
+
+  mrproper:
+    desc: "Cleans (mrproper) the project."
+    prompt: "Run mrproper?"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - rm -rf node_modules out || true
+      - rm -rf "{{.IMG_BUN_DIR}}" || true
+      - podman image rm {{.IMG_BUILDER}} {{.IMG_BASE}} {{.IMG}} || true
+      - podman image rm {{.IMG_BUILDER}}-musl {{.IMG_BASE}}-musl {{.IMG}}-musl || true
+      - podman volume rm {{.PROJ}} || true
+

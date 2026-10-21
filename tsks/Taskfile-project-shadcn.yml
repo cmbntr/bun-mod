@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  TODO:
+    vars:
+      SHADCN_VERSION: '{{.SHADCN_VERSION | default "latest"}}'
+      EXTRA_ARGS: '{{.EXTRA_ARGS | default (.CLI_ARGS | default "info")}}'
+    cmds:
+      - bun x --bun "shadcn@{{.SHADCN_VERSION}}" {{.EXTRA_ARGS}}
+    env:
+      DO_NOT_TRACK: "1"
+
+  init:
+    vars:
+      EXTRA_ARGS: '{{.EXTRA_ARGS | default (.CLI_ARGS | default "info")}}'
+    cmds:
+      - task: shadcn:TODO
+        vars:
+          EXTRA_ARGS: "init --help"
+

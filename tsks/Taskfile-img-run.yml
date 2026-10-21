@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  TODO:
+    desc: "Runs {{.IMG}}"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman volume create {{.PROJ}} || true
+      - >
+        podman run --name {{.PROJ}} --rm -it --user "${PODMAN_USER-'12345:0'}"
+        -e OTEL_EFFECT=false -e OTEL_EXPORTER_OTLP_ENDPOINT=http://host.containers.internal:4318
+        --http-proxy=false --env-host=false --env PORT={{.APP_PORT}} -p {{.APP_PORT}}:{{.APP_PORT}}
+        --env-file=.env.local
+        -v "{{.PROJ}}:/data"
+        "{{.IMG}}" {{.CLI_ARGS}}
+
+  musl:
+    desc: "Runs {{.IMG}}-musl"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - podman volume create {{.PROJ}} || true
+      - >
+        podman run --name {{.PROJ}}-musl --rm -it --user "${PODMAN_USER-'12345:0'}"
+        -e OTEL_EFFECT=false -e OTEL_EXPORTER_OTLP_ENDPOINT=http://host.containers.internal:4318
+        --http-proxy=false --env-host=false --env PORT={{.APP_PORT}} -p {{.APP_PORT}}:{{.APP_PORT}}
+        --env-file=.env.local
+        -v "{{.PROJ}}:/data"
+        "{{.IMG}}-musl" {{.CLI_ARGS}}
+

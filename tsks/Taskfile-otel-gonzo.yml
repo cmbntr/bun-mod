@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  TODO:
+    desc: "Runs Gonzo - The TUI for log analysis"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmd: nix run "nixpkgs#gonzo" -- --otlp-enabled --otlp-http-port=${GONZO_OTLP_HTTP_PORT-"4318"} {{.CLI_ARGS}}
+    env:
+      # GONZO_OTLP_HTTP_PORT: 14318
+      GONZO_LOG_BUFFER: "1000"
+      GONZO_MEMORY_SIZE: "10000"
+
+  ai:
+    desc: "Runs Gonzo - The TUI for log analysis"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmd: nix run "nixpkgs#gonzo" -- --ai-model="gpt-5-mini" --otlp-enabled --otlp-http-port=${GONZO_OTLP_HTTP_PORT-"4318"} {{.CLI_ARGS}}
+    env:
+      OPENAI_API_KEY: "sk-none"
+      OPENAI_API_BASE: "http://aiproxy.unicorn-tegu.ts.net/v1"
+      # GONZO_OTLP_HTTP_PORT: 14318
+      GONZO_LOG_BUFFER: "1000"
+      GONZO_MEMORY_SIZE: "10000"
+

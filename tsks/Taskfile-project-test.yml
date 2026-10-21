@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  TODO:
+    desc: "Runs bun run test"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run test {{.CLI_ARGS}}
+    env:
+      PORT: "{{.APP_PORT}}"
+      NODE_ENV: "production"
+
+  create:
+    desc: "Tests this repo with bun create"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      OUT: "/tmp/{{.PROJ}}-test-create/{{now | unixEpoch}}"
+    cmds:
+      - bun create {{.PROJ}} {{.OUT}} {{.CLI_ARGS}}
+    env:
+      BUN_CREATE_DIR: "{{.ROOT_DIR}}/.."
+
+  create:clean:
+    desc: "Cleans up the test create dirs"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - rm -rf /tmp/{{.PROJ}}-test-create
+

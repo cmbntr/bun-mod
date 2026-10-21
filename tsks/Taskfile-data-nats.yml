@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  TODO:
+    desc: "Runs NATS Server"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      NATS_BASE_MB: "128"
+      MAX_MEM_STORE_MB: "384"
+      GOMEMLIMIT_BYTES:
+        sh: |
+          echo $(( ({{.MAX_MEM_STORE_MB}} + {{.NATS_BASE_MB}}) * 1024 * 1024 ))
+    cmds:
+      - >
+        podman run --rm -it --name {{.PROJ}}-nats --env-host=false --read-only -u 12345:0
+        -e GOMEMLIMIT={{.GOMEMLIMIT_BYTES}} -e GODEBUG=gctrace=1
+        -p 4222:4222 -p 8222:8222
+        --pull=${PULL:newer} docker.io/library/nats:2-alpine
+        nats-server --cluster_name NATS --server_name {{.PROJ}}-nats
+        --port 4222 --http_port 8222 --jetstream {{.CLI_ARGS}}
+
+  cli:
+    desc: "Runs NATS CLI."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - nix-shell -p natscli --command "nats {{.CLI_ARGS}}"
+
+  top:
+    desc: "Runs nats-top."
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    cmds:
+      - nix-shell -p nats-top --command "nats-top {{.CLI_ARGS}}"
+

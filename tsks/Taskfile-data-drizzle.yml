@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  TODO:
+    desc: "Runs drizzle"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun x drizzle-kit {{.CLI_ARGS}}
+
+  export:
+    desc: "Runs drizzle export to generate src/db/schema.sql"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - task drizzle:TODO -- export | sed -E -e 's|^CREATE ([^`]+) `|--###\nCREATE \1 IF NOT EXISTS `|' | tee src/db/schema.sql
+

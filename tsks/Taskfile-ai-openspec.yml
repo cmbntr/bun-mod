@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+vars:
+  OPENSPEC_VERSION: "1.14.0"
+
+tasks:
+  TODO:
+    desc: "Run openspec CLI (https://github.com/Fission-AI/OpenSpec)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    silent: true
+    aliases:
+      - "::spec"
+    env:
+      CODEX_HOME: "{{.ROOT_DIR}}/.codex"
+      OPENCODE_CONFIG_DIR: "{{.ROOT_DIR}}/.opencode"
+      PI_CODING_AGENT_DIR: "{{.ROOT_DIR}}/.pi/home"
+    cmds:
+      - bun x --silent --bun --package @fission-ai/openspec@{{.OPENSPEC_VERSION}} openspec {{.CLI_ARGS | default "view"}}
+
+  glow:
+    desc: "View openspec artefacts"
+    dir: "{{.ROOT_DIR}}/openspec"
+    interactive: true
+    cmds:
+      - glow --all --tui --line-numbers "$( { printf '%s\n' project.md; find specs changes -mindepth 1 -maxdepth 1 -type d ! -path 'changes/archive*' -print; } | fzf -1 -0 -q '{{.CLI_ARGS}}' --prompt='View > ' --header=$'What do you want to view?')"
+
+  init:
+    desc: "Run openspec init (https://github.com/Fission-AI/OpenSpec)"
+    dir: "{{.ROOT_DIR}}"
+    interactive: true
+    env:
+      CODEX_HOME: "{{.ROOT_DIR}}/.codex"
+      OPENCODE_CONFIG_DIR: "{{.ROOT_DIR}}/.opencode"
+      PI_CODING_AGENT_DIR: "{{.ROOT_DIR}}/.pi/home"
+    cmds:
+      - bun x --bun @fission-ai/openspec@{{.OPENSPEC_VERSION}} init --tools opencode {{.CLI_ARGS}}
+

@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  TODO:
+    desc: "Runs bun run docs"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run docs {{.CLI_ARGS}}
+
+  md:
+    desc: "Runs bun run docs-md"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun run docs-md {{.CLI_ARGS}}
+
+  md:init:
+    desc: "Installs dependencies for docs-md"
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add -D typedoc typedoc-plugin-markdown
+

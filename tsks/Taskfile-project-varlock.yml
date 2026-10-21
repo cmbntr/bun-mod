@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+
+tasks:
+  TODO:
+    desc: "Runs varlock (https://varlock.dev/)"
+    dir: "{{.ROOT_DIR}}"
+    vars:
+      EXTRA_ARGS: '{{.EXTRA_ARGS | default (.CLI_ARGS | default "load")}}'
+    cmds:
+      - bun x --bun "varlock${BUNX_VERSION-"@latest"}" {{.EXTRA_ARGS}}
+    env:
+      VARLOCK_TELEMETRY_DISABLED: "1"
+
+  typegen:
+    desc: "Runs varlock typegen"
+    cmds:
+      - task: varlock:TODO
+        vars:
+          EXTRA_ARGS: "typegen"
+
+  lint:
+    desc: "Runs varlock linting"
+    cmds:
+      - task: varlock:TODO
+        vars:
+          EXTRA_ARGS: "load --agent --compact"
+

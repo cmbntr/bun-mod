@@ -14,11 +14,31 @@ includes:
   project:
     taskfile: ./tsks/Taskfile-project.yml
     flatten: true
+  # Hoisted from the flattened parent; include names preserve task prefixes.
+  dev:
+    taskfile: ./tsks/Taskfile-project-dev.yml
+  fmt:
+    taskfile: ./tsks/Taskfile-project-fmt.yml
+  docs:
+    taskfile: ./tsks/Taskfile-project-docs.yml
+  test:
+    taskfile: ./tsks/Taskfile-project-test.yml
+  clean:
+    taskfile: ./tsks/Taskfile-project-clean.yml
+  varlock:
+    taskfile: ./tsks/Taskfile-project-varlock.yml
+  shadcn:
+    taskfile: ./tsks/Taskfile-project-shadcn.yml
   deps:
     taskfile: ./tsks/Taskfile-deps.yml
   data:
     taskfile: ./tsks/Taskfile-data.yml
     flatten: true
+  # Hoisted from the flattened parent; include names preserve task prefixes.
+  drizzle:
+    taskfile: ./tsks/Taskfile-data-drizzle.yml
+  nats:
+    taskfile: ./tsks/Taskfile-data-nats.yml
   compile:
     taskfile: ./tsks/Taskfile-compile.yml
   img:
@@ -30,6 +50,9 @@ includes:
   deploy:
     taskfile: ./tsks/Taskfile-deploy.yml
     flatten: true
+  # Hoisted from the flattened parent; include names preserve task prefixes.
+  fly:
+    taskfile: ./tsks/Taskfile-deploy-fly.yml
   otel:
     taskfile: ./tsks/Taskfile-otel.yml
   ai:

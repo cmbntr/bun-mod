@@ -1,10 +1,6 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 version: "3"
 
-includes:
-  fly:
-    taskfile: ./Taskfile-deploy-fly.yml
-
 tasks:
   wrangler:
     desc: "Runs the cloudflare wrangler CLI"

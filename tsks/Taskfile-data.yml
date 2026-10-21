@@ -1,12 +1,6 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 version: "3"
 
-includes:
-  drizzle:
-    taskfile: ./Taskfile-data-drizzle.yml
-  nats:
-    taskfile: ./Taskfile-data-nats.yml
-
 tasks:
   datasette:
     desc: "Runs Datasette. (https://datasette.io/)"

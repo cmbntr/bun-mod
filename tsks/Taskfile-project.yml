@@ -1,22 +1,6 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 version: "3"
 
-includes:
-  dev:
-    taskfile: ./Taskfile-project-dev.yml
-  fmt:
-    taskfile: ./Taskfile-project-fmt.yml
-  docs:
-    taskfile: ./Taskfile-project-docs.yml
-  test:
-    taskfile: ./Taskfile-project-test.yml
-  clean:
-    taskfile: ./Taskfile-project-clean.yml
-  varlock:
-    taskfile: ./Taskfile-project-varlock.yml
-  shadcn:
-    taskfile: ./Taskfile-project-shadcn.yml
-
 tasks:
   vscode:open:
     desc: "Opens the VS Code workspace."

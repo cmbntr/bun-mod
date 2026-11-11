@@ -365,6 +365,37 @@ tasks:
       - bun add temporal-polyfill-lite # https://github.com/fabon-f/temporal-polyfill-lite
   # - bun add temporal-polyfill # https://github.com/fullcalendar/temporal-polyfill
 
+  deps:duckdb-wasm:
+    desc: "Adds duckdb-wasm."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add @duckdb/duckdb-wasm@next # https://github.com/duckdb/duckdb-wasm
+
+  deps:re2-wasm:
+    desc: "Adds re2-wasm."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add re2-wasm # https://github.com/google/re2-wasm
+
+  deps:ohm:
+    desc: "Adds ohm parser (https://ohmjs.org/editor/)."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add ohm-js # https://github.com/ohmjs/ohm
+
+  deps:mcporter:
+    desc: "Adds mcporter."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add mcporter # https://github.com/openclaw/mcporter
+
+  deps:konclude:
+    desc: "Adds rdf-reasoner-konclude."
+    dir: "{{.ROOT_DIR}}"
+    cmds:
+      - bun add rdf-reasoner-konclude # https://github.com/ThHanke/rdf-reasoner-konclude
+      - bun add --dev @rdfjs/types
+
   drizzle:
     desc: "Runs drizzle"
     dir: "{{.ROOT_DIR}}"
